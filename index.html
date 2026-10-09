@@ -183,6 +183,23 @@ select{border:1px solid var(--line);border-radius:4px;padding:5px 6px;background
 .lrow select{display:block;width:100%;margin-top:2px;font-size:.9375rem;color:var(--ink)}
 .linkbtn{border:0;background:none;color:var(--accent);text-decoration:underline;padding:0;font-size:.875rem}
 .edhead h2{margin:0;font-size:1.25rem;flex:1 1 200px}
+.hbtns{display:flex;gap:8px;flex-wrap:wrap}
+.guide{background:var(--sheet);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;padding:8px 14px;margin:0 0 14px;max-width:760px}
+.guide summary{cursor:pointer;font-weight:700;padding:2px 0}
+.guide ol{margin:8px 0 6px;padding-left:1.4em}
+.guide li{margin:4px 0}
+.guide p{margin:6px 0 4px;font-size:.875rem;color:var(--sub)}
+.tpick{margin-top:4px}
+.tp-bar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.tp-bar input{flex:1 1 200px;border:1px solid var(--line);border-radius:4px;padding:7px 9px;background:#fff;font-size:1rem}
+.tp-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;max-height:320px;overflow:auto}
+.tp-list .note{grid-column:1 / -1}
+.tp-item{display:flex;justify-content:space-between;align-items:baseline;gap:8px;text-align:left;background:#fff;border:1px solid var(--line);border-left:3px solid var(--ink);border-radius:4px;padding:7px 10px}
+.tp-item:hover{border-color:var(--ink)}
+.tp-item span{font-size:.75rem;color:var(--sub);white-space:nowrap}
+details.addtask summary{cursor:pointer;font-weight:700}
+details.addtask[open] summary{margin-bottom:8px}
+.lrow.flash,.flash{outline:3px solid var(--accent)}
 .pcard .meter{margin:6px 0 0}
 </style>
 </head>
@@ -213,7 +230,7 @@ select{border:1px solid var(--line);border-radius:4px;padding:5px 6px;background
 <script src="core.js"></script>
 <script>
 'use strict';
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 const C = window.TJCore;
 const BASE = 'roadmap/apps/tejunroku';
 const DATA_PATH = BASE + '/data.json', RUNS_DIR = BASE + '/runs';
@@ -224,6 +241,7 @@ const DEFAULT_REPO = 'nisenonamae/notion-daily';
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = C.uid, clone = C.clone;
+const se = name => { try { if (typeof SE !== 'undefined') SE.play(name); } catch (e) {} };   // 効果音(下の方で用意する)
 const md = d => d ? (+d.slice(5, 7)) + '月' + (+d.slice(8, 10)) + '日' : '';
 
 /* ---------- 文字と base64 ---------- */
@@ -346,7 +364,7 @@ const ops = {
 const S = { data: C.emptyData(), sha: null, dirty: new Set(), removed: new Set(),
   tab: 'procs', open: { procs: null, parts: null, cycles: null, ranges: null },
   pick: {}, checks: {}, cyPick: 0, saving: false, connOpen: false,
-  tasks: [], tasksMsg: '', runs: {}, runsState: '', linkRows: new Set() };
+  tasks: [], tasksMsg: '', runs: {}, runsState: '', linkRows: new Set(), tq: {} };
 const COLLS = ['procs', 'parts', 'ranges', 'cycles', 'links'];
 const key = (c, id) => c + ':' + id;
 const splitKey = k => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)]; };
@@ -459,7 +477,7 @@ async function save() {
     for (const k of rem) S.removed.delete(k);
     for (const k of S.removed) { const [c, id] = splitKey(k); putItem(data, c, id, null); }
     S.data = data; S.sha = sha;
-    setStatus('保存しました。');
+    setStatus('保存しました。'); se('save');
   } catch (e) { setStatus(errMsg(e), true); if (e.status === 'noconn' || e.status === 401) S.connOpen = true; }
   S.saving = false; saveCache(); render();
 }
@@ -488,17 +506,78 @@ function countDo(steps) { let n = 0; C.walk(steps, s => { if (s.type === 'do') n
 function procOptions(sel, none) {
   return `<option value="">${none}</option>` + S.data.procs.map(p => `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.name || '名前なし')}</option>`).join('');
 }
-function taskSelect(tasks, attrs) {
-  const g = {};
-  tasks.forEach(t => (g[t.ministry || '省なし'] = g[t.ministry || '省なし'] || []).push(t));
-  return `<select ${attrs}><option value="">タスクを選ぶ</option>` + Object.entries(g).map(([m, ts]) =>
-    `<optgroup label="${esc(m)}">` + ts.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('') + `</optgroup>`).join('') + `</select>`;
+/* タスクを選ぶところ。名前と省で絞り込める */
+const PICKERS = {};
+const hira = s => String(s || '').toLowerCase().replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+const byMinName = (a, b) => (a.ministry || '').localeCompare(b.ministry || '', 'ja') || a.name.localeCompare(b.name, 'ja');
+function taskPicker(id, tasks, act, emptyMsg) {
+  PICKERS[id] = { tasks: tasks.slice().sort(byMinName), act, emptyMsg };
+  const q = S.tq[id] || { q: '', m: '' };
+  const mins = [...new Set(tasks.map(t => t.ministry || '省なし'))].sort((a, b) => a.localeCompare(b, 'ja'));
+  return `<div class="tpick"><div class="tp-bar"><input type="search" data-tq="${id}" value="${esc(q.q)}" placeholder="名前で探す(例:英単語)" aria-label="タスクを名前で探す">` +
+    `<select data-tmin="${id}" aria-label="省で絞り込む"><option value="">すべての省</option>${mins.map(m => `<option${m === q.m ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></div>` +
+    `<div class="tp-list" id="tpl-${id}">${pickerList(id)}</div></div>`;
+}
+function pickerList(id) {
+  const P = PICKERS[id]; if (!P) return '';
+  if (!P.tasks.length) return `<p class="note">${esc(P.emptyMsg)}</p>`;
+  const q = S.tq[id] || { q: '', m: '' }, words = hira(q.q).trim().split(/\s+/).filter(Boolean);
+  const hit = P.tasks.filter(t => (!q.m || (t.ministry || '省なし') === q.m) && words.every(w => hira(t.name).includes(w)));
+  if (!hit.length) return `<p class="note">当てはまるタスクがありません。</p>`;
+  const MAX = 30;
+  return hit.slice(0, MAX).map(t => `<button type="button" class="tp-item" data-act="${P.act}" data-tid="${esc(t.id)}"><b>${esc(t.name)}</b><span>${esc(t.ministry || '省なし')}</span></button>`).join('') +
+    (hit.length > MAX ? `<p class="note">ほかに ${hit.length - MAX}件あります。名前で絞り込んでください。</p>` : '');
+}
+
+/* はじめての人向けの説明と、例 */
+const GUIDE = `<details class="guide"%OPEN%><summary>はじめての人へ:手順録の使い方</summary><ol>
+  <li>「手順書」で、タスクでやることを順番に並べます。迷いどころは「分かれ道」にします。</li>
+  <li>やるたびに進む区切り(単語帳 401〜500 など)は「範囲」に、いろいろな手順書で使う手順は「部品」にしておきます。</li>
+  <li>「結びつき」でタスクに手順書をつなぎます。日によって中身が回るタスクは「サイクル」で、中身ごとに手順書を選びます。</li>
+  <li>保存すると、行軍表でタスクの名前を押したときに、今日の手順が開きます。</li></ol>
+  <p>どんな感じか見たいときは「例を入れる」を押します。例はふつうの手順書と同じなので、直したり消したりできます。</p></details>`;
+const EX = { proc: '例:長文の日', part: '例:Ankiに追加', range: '例の単語帳' };
+function exPart() {
+  let p = S.data.parts.find(x => x.name === EX.part);
+  if (!p) {
+    p = { id: uid('t'), name: EX.part, steps: [
+      { id: uid('s'), type: 'do', text: '知らなかった単語をカードにする', min: 3 },
+      { id: uid('s'), type: 'do', text: '例文を1つ付ける', min: 2 }] };
+    S.data.parts.push(p); touch('parts', p.id);
+  }
+  return p;
+}
+function exRange() {
+  let r = S.data.ranges.find(x => x.name === EX.range);
+  if (!r) {
+    r = { id: uid('r'), name: EX.range, unit: '番', start: 1, end: 2000, step: 100, atEnd: 'stop', created: C.taskDay(), set: { pos: 401, at: new Date().toISOString() } };
+    S.data.ranges.push(r); touch('ranges', r.id);
+  }
+  return r;
+}
+function exProc() {
+  let p = S.data.procs.find(x => x.name === EX.proc);
+  if (p) return p;
+  const part = exPart(); exRange();
+  const sid = () => uid('s'), oid = () => uid('o');
+  p = { id: uid('p'), name: EX.proc, steps: [
+    { id: sid(), type: 'do', text: '時間を計って長文を1題解く', min: 20 },
+    { id: sid(), type: 'branch', question: '全問正解だった?', options: [
+      { id: oid(), label: 'はい', steps: [{ id: sid(), type: 'do', text: '次の難しさの長文を1題', min: 15 }] },
+      { id: oid(), label: 'いいえ', steps: [
+        { id: sid(), type: 'do', text: '間違えた設問の理由を書く', min: 10 },
+        { id: sid(), type: 'do', text: '該当する段落を音読3回', min: 10 }] }] },
+    { id: sid(), type: 'do', text: '単語帳の {' + EX.range + '} を1周', min: 10 },
+    { id: sid(), type: 'part', partId: part.id }] };
+  S.data.procs.push(p); touch('procs', p.id);
+  return p;
 }
 
 /* 手順書・部品の一覧 */
 function renderList(v) {
   const c = S.tab, items = S.data[c], isPart = c === 'parts';
-  v.innerHTML = `<div class="listhead"><h2>${isPart ? '部品' : '手順書'}</h2><button class="btn primary" type="button" data-act="newitem">${isPart ? '新しい部品を作る' : '新しい手順書を作る'}</button></div>` +
+  v.innerHTML = `<div class="listhead"><h2>${isPart ? '部品' : '手順書'}</h2><span class="hbtns"><button class="btn quiet" type="button" data-act="example">例を入れる</button><button class="btn primary" type="button" data-act="newitem">${isPart ? '新しい部品を作る' : '新しい手順書を作る'}</button></span></div>` +
+    (isPart ? '' : GUIDE.replace('%OPEN%', items.length ? '' : ' open')) +
     (isPart ? `<p class="info">「Ankiに追加」「音読3回」のような、いろいろな手順書で使う手順をまとめておく棚です。部品を直すと、使っているすべての手順書に反映されます。</p>` : '') +
     (items.length ? `<div class="plist">` + items.map(p => {
       const sp = C.fmtSpan(C.span(p.steps, S.data));
@@ -506,7 +585,7 @@ function renderList(v) {
       return `<button type="button" class="pcard" data-act="open" data-id="${esc(p.id)}"><b>${esc(p.name || '名前なし')}</b>` +
         `<span>やること ${countDo(p.steps)}つ${sp ? '・' + sp : ''}</span><br><span>${esc(sub)}</span>${unsaved(c, p.id)}</button>`;
     }).join('') + `</div>`
-      : `<p class="empty">${isPart ? '部品がまだありません。「新しい部品を作る」から始めます。' : '手順書がまだありません。「新しい手順書を作る」から始めます。'}</p>`);
+      : `<p class="empty">${isPart ? '部品がまだありません。「新しい部品を作る」から始めます。「例を入れる」で、どんな感じか見られます。' : '手順書がまだありません。「新しい手順書を作る」から始めます。「例を入れる」で、どんな感じか見られます。'}</p>`);
 }
 
 /* 手順書・部品の編集 */
@@ -629,8 +708,9 @@ function previewSoon(fn) { clearTimeout(pvTimer); pvTimer = setTimeout(fn, 120);
 function renderCycles(v) {
   const free = S.tasks.filter(t => !cycleOf(t.id));
   v.innerHTML = `<div class="listhead"><h2>サイクル</h2></div>
-    <div class="box"><h3>サイクルを作る</h3>${S.tasksMsg ? `<p class="note">${esc(S.tasksMsg)}</p>` : ''}
-      <div class="rrow">${taskSelect(free, 'id="cyTask" aria-label="サイクルを作るタスク"')}<button class="btn primary" type="button" data-act="cy-new">作る</button></div></div>` +
+    <div class="box"><h3>サイクルを作るタスクを選ぶ</h3>${S.tasksMsg ? `<p class="note">${esc(S.tasksMsg)}</p>` : ''}
+      <p class="note">日によって中身が回るタスク(例:過去の語彙 → 未来の語彙 → 長文 → また過去の語彙…)に作ります。押すとすぐ作られます。</p>
+      ${taskPicker('cy', free, 'cy-new-for', 'サイクルを作れるタスクがありません。')}</div>` +
     (S.data.cycles.length ? `<div class="plist">` + S.data.cycles.map(c => `<button type="button" class="pcard" data-act="cy-open" data-id="${esc(c.id)}"><b>${esc(taskName(c.taskId))}</b>` +
       `<span>${esc(c.items.map(i => i.name || '名前なし').join(' → ') || '中身がまだありません')}</span>${unsaved('cycles', c.id)}</button>`).join('') + `</div>`
       : `<p class="empty">サイクルはまだありません。上でタスクを選んで作ります。</p>`);
@@ -661,7 +741,8 @@ function renderCycleEd() {
   else start = `<p class="note">${md(c.anchorDate)}に「${esc((c.items[c.anchorIndex] || {}).name || '名前なし')}」から始まりました。今どの中身かは行軍表で見られます。</p>`;
   const rules = c.rules.map((r, i) => `<div class="rrow"><input type="text" data-cf="rule" data-ri="${i}" value="${esc(r)}" placeholder="例:未実行が3日以上続いたとき" aria-label="切り替えてよい条件">
       <button type="button" class="small" data-act="rule-rm" data-ri="${i}">消す</button></div>`).join('');
-  $('#ed').innerHTML = `<div class="box"><h3>中身(この順に回ります)</h3>${old}${items}
+  const exBtn = !c.items.length ? `<p class="note">例:英語なら「過去の語彙 → 未来の語彙 → 長文」。<button type="button" class="linkbtn" data-act="cy-example">例を入れる</button></p>` : '';
+  $('#ed').innerHTML = `<div class="box"><h3>中身(この順に回ります)</h3>${old}${exBtn}${items}
       <button type="button" class="add2" data-act="cy-add">＋ 中身</button>
       <p class="note" style="margin-top:8px">「タスクの手順書を使う」にすると、結びつきのタブで決めたそのタスクの手順書が出ます。</p></div>
     <div class="box"><h3>始まり</h3>${start}</div>
@@ -698,7 +779,7 @@ function newCycle(tid) {
 
 /* 範囲 */
 function renderRanges(v) {
-  v.innerHTML = `<div class="listhead"><h2>範囲</h2><button class="btn primary" type="button" data-act="rg-new">新しい範囲を作る</button></div>
+  v.innerHTML = `<div class="listhead"><h2>範囲</h2><span class="hbtns"><button class="btn quiet" type="button" data-act="example">例を入れる</button><button class="btn primary" type="button" data-act="rg-new">新しい範囲を作る</button></span></div>
     <p class="info">範囲は「単語帳 401〜500」のように、やるたびに進む区切りです。手順の文に {範囲の名前} と書くと、今日の範囲に置き換わります。</p>` +
     (S.runsState === 'err' ? `<p class="status err">行軍表の記録を読めなかったので、今の位置は記録を足す前のものです。</p>` : '') +
     (S.data.ranges.length ? `<div class="plist">` + S.data.ranges.map(r => {
@@ -757,8 +838,9 @@ function renderLinks(v) {
   const rows = [...ids].map(tid => ({ tid, t: findTask(tid) })).sort((a, b) =>
     ((a.t && a.t.ministry) || '').localeCompare((b.t && b.t.ministry) || '', 'ja') || taskName(a.tid).localeCompare(taskName(b.tid), 'ja'));
   const others = S.tasks.filter(t => !ids.has(t.id));
-  v.innerHTML = `<div class="listhead"><h2>結びつき</h2>${taskSelect(others, 'data-sel="lnadd" aria-label="タスクを足す"')}</div>
-    <p class="info">タスクの手順書は、サイクルが無いタスクと、サイクルの中身に手順書が無いときに使います。${S.tasksMsg ? esc(S.tasksMsg) : ''}</p>` +
+  v.innerHTML = `<div class="listhead"><h2>結びつき</h2></div>
+    <p class="info">タスクの手順書は、サイクルが無いタスクと、サイクルの中身に手順書が無いときに使います。${S.tasksMsg ? esc(S.tasksMsg) : ''}</p>
+    <details class="box addtask"${rows.length ? '' : ' open'}><summary>タスクを足す</summary>${taskPicker('ln', others, 'ln-add', 'すべてのタスクがもう並んでいます。')}</details>` +
     (rows.length ? rows.map(({ tid, t }) => {
       const cy = cycleOf(tid);
       const withProc = cy ? cy.items.filter(i => i.procId).length : 0;
@@ -767,7 +849,7 @@ function renderLinks(v) {
         <div class="lc">${cy ? `<span>サイクル:${esc(cy.items.map(i => i.name || '名前なし').join(' → ') || '中身なし')}(手順書あり ${withProc}/${cy.items.length})</span><br>
           <button type="button" class="linkbtn" data-act="cy-open" data-id="${esc(cy.id)}">サイクルを開く</button>`
           : `<span>サイクルなし</span><br><button type="button" class="linkbtn" data-act="cy-new-for" data-tid="${esc(tid)}">サイクルを作る</button>`}</div></div>`;
-    }).join('') : `<p class="empty">まだ結びつきがありません。右上でタスクを選んで足します。</p>`);
+    }).join('') : `<p class="empty">まだ結びつきがありません。上の「タスクを足す」で選びます。</p>`);
 }
 
 /* ---------- 操作 ---------- */
@@ -819,7 +901,19 @@ document.addEventListener('click', e => {
   if (act === 'back') { S.open[S.tab] = null; render(); return; }
   if (act === 'openpart') { openItem('parts', b.dataset.id); return; }
   if (act === 'cy-open') { openItem('cycles', b.dataset.id); return; }
-  if (act === 'cy-new') { const sel = $('#cyTask'); newCycle(sel && sel.value); return; }
+  if (act === 'ln-add') {
+    S.linkRows.add(b.dataset.tid); render();
+    setStatus('「' + taskName(b.dataset.tid) + '」を足しました。タスクの手順書を選んでください。');
+    const row = document.querySelector(`.lrow[data-tid="${b.dataset.tid}"]`); if (row) { row.classList.add('flash'); row.scrollIntoView && row.scrollIntoView({ block: 'center' }); }
+    return;
+  }
+  if (act === 'example') {
+    if (S.tab === 'procs') { const had = S.data.procs.some(x => x.name === EX.proc), p = exProc(); openItem('procs', p.id);
+      setStatus(had ? '例はもう入っています。' : '例を入れました。見本(スマホでは上)の分かれ道を押してみてください。いらなければ「消す」で消せます(範囲と部品の例も入っています)。'); }
+    else if (S.tab === 'parts') { const p = exPart(); openItem('parts', p.id); setStatus('部品の例です。手順書の「＋ 部品…」から差し込めます。'); }
+    else if (S.tab === 'ranges') { const r = exRange(); openItem('ranges', r.id); setStatus('範囲の例です。手順の文に {' + EX.range + '} と書くと、今日の範囲に置き換わります。'); }
+    return;
+  }
   if (act === 'cy-new-for') { newCycle(b.dataset.tid); return; }
   if (act === 'rg-open') { openItem('ranges', b.dataset.id); return; }
   if (act === 'rg-new') {
@@ -851,6 +945,14 @@ document.addEventListener('click', e => {
     if (act === 'cy-del') {
       if (!confirm(taskName(c.taskId) + 'のサイクルを消しますか?')) return;
       S.data.cycles.splice(S.data.cycles.indexOf(c), 1); drop('cycles', c.id); S.open.cycles = null; render(); return;
+    }
+    if (act === 'cy-example') {
+      if (c.items.length) return;
+      const ex = S.data.procs.find(x => x.name === EX.proc);
+      c.items = [{ id: uid('i'), name: '過去の語彙', procId: null }, { id: uid('i'), name: '未来の語彙', procId: null }, { id: uid('i'), name: '長文', procId: ex ? ex.id : null }];
+      if (!c.rules.length) c.rules = ['未実行が3日以上続いたとき', '試験前の週'];
+      c.anchorIndex = 0; touch('cycles', c.id); renderCycleEd();
+      setStatus('例を入れました。中身の名前や手順書は自由に変えられます。'); return;
     }
     if (act === 'cy-add') { const it = { id: uid('i'), name: '', procId: null }; c.items.push(it); touch('cycles', c.id); renderCycleEd(); const i = $(`[data-cf="iname"][data-iid="${it.id}"]`); if (i) i.focus(); return; }
     if (act === 'cy-copyold') {
@@ -917,6 +1019,11 @@ function $$last(sel) { const a = document.querySelectorAll(sel); return a[a.leng
 
 document.addEventListener('input', e => {
   const t = e.target; if (!t.dataset || t.tagName === 'SELECT') return;
+  if (t.dataset.tq) {
+    const id = t.dataset.tq; S.tq[id] = Object.assign({ q: '', m: '' }, S.tq[id], { q: t.value });
+    const box = $('#tpl-' + id); if (box) box.innerHTML = pickerList(id);
+    return;
+  }
   if (t.dataset.f) {
     const p = cur(); if (!p) return;
     const f = t.dataset.f;
@@ -947,12 +1054,13 @@ document.addEventListener('change', e => {
   const t = e.target, d = t.dataset || {};
   if (d.sel === 'addpart') {
     const p = cur(); if (!p || !t.value) return;
-    ops.addPart(p, d.key, t.value); touch(S.tab, p.id); renderSteps();
+    ops.addPart(p, d.key, t.value); touch(S.tab, p.id); renderSteps(); se('link');
   } else if (d.sel === 'link') {
     if (t.value) S.data.links[d.tid] = t.value; else delete S.data.links[d.tid];
     S.linkRows.add(d.tid); touch('links', d.tid); render();
-  } else if (d.sel === 'lnadd') {
-    if (!t.value) return; S.linkRows.add(t.value); render();
+  } else if (d.tmin) {
+    S.tq[d.tmin] = Object.assign({ q: '', m: '' }, S.tq[d.tmin], { m: t.value });
+    const box = $('#tpl-' + d.tmin); if (box) box.innerHTML = pickerList(d.tmin);
   } else if (d.cf === 'iproc') {
     const c = curCycle(), it = c && c.items.find(x => x.id === d.iid); if (!it) return;
     it.procId = t.value || null; touch('cycles', c.id); renderCyclePreview();
@@ -997,8 +1105,135 @@ function boot() {
   else { S.connOpen = true; render(); setStatus(errMsg({ status: 'noconn' }), true); }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js?v=' + APP_VERSION).catch(() => {});
 }
-window.TJ = { S, C, ops, commit, load, save, render, APP_VERSION };
+window.TJ = { S, C, ops, commit, load, save, render, APP_VERSION, EX };
 boot();
+</script>
+<style>.se-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.5rem 0;font-size:.86rem}.se-btn{min-width:2.6rem;border:1px solid #bbb;border-radius:999px;background:#fff;padding:.1rem .7rem;font:inherit;cursor:pointer}.se-btn[aria-pressed="true"]{background:#1f2328;color:#fff;border-color:#1f2328}.se-vol{display:flex;align-items:center;gap:.3rem}.se-vol input{width:8rem}</style>
+<script id="se-core">
+// ───────── 効果音(ブラウザの中で音を合成。音のファイルは使わない)─────────
+// 設定(入/切・音量)は 3つのアプリで共通(localStorage の se-on / se-vol)
+const SE = (() => {
+  let ctx = null, master = null, lastTap = 0, lastErr = 0;
+  const ls = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
+  let on = ls("se-on", "1") !== "0", vol = Math.max(0, Math.min(1, +ls("se-vol", "0.5")));
+  function ac(){
+    if (!on) return null;
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    if (!ctx) { ctx = new AC(); master = ctx.createGain(); master.connect(ctx.destination); }
+    if (ctx.state === "suspended") ctx.resume();
+    master.gain.value = vol * 0.9;
+    return ctx;
+  }
+  // 1つの音:周波数 f(滑らせるなら f2)、始まり t、長さ d、波の形、大きさ g
+  function note(c, f, t, d, o){
+    o = o || {};
+    const osc = c.createOscillator(), gn = c.createGain(), t0 = c.currentTime + (t || 0);
+    osc.type = o.type || "sine"; osc.frequency.setValueAtTime(f, t0);
+    if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t0 + d);
+    const g = o.g == null ? 0.2 : o.g, a = o.a == null ? 0.005 : o.a;
+    gn.gain.setValueAtTime(0.0001, t0); gn.gain.exponentialRampToValueAtTime(g, t0 + a);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    let last = gn;
+    if (o.lp) { const fl = c.createBiquadFilter(); fl.type = "lowpass"; fl.frequency.value = o.lp; gn.connect(fl); last = fl; }
+    osc.connect(gn); last.connect(master); osc.start(t0); osc.stop(t0 + d + 0.05);
+  }
+  // 鐘のような音(基音 + 倍音)
+  const bell = (c, f, t, d, g) => { note(c, f, t, d, { g: g }); note(c, f * 2, t, d * 0.6, { g: g * 0.35 }); note(c, f * 3.01, t, d * 0.3, { g: g * 0.12 }); };
+  // ざわめき(風・波)
+  function noise(c, t, d, o){
+    o = o || {};
+    const n = Math.floor(c.sampleRate * d), buf = c.createBuffer(1, n, c.sampleRate), ch = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(), fl = c.createBiquadFilter(), gn = c.createGain(), t0 = c.currentTime + (t || 0);
+    src.buffer = buf; fl.type = o.type || "lowpass"; fl.Q.value = o.q || 0.7;
+    fl.frequency.setValueAtTime(o.f || 400, t0); if (o.f2) fl.frequency.exponentialRampToValueAtTime(o.f2, t0 + d * 0.8);
+    const g = o.g || 0.08;
+    gn.gain.setValueAtTime(0.0001, t0); gn.gain.exponentialRampToValueAtTime(g, t0 + d * 0.35); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    src.connect(fl); fl.connect(gn); gn.connect(master); src.start(t0); src.stop(t0 + d + 0.05);
+  }
+  const lib = {
+    tap: c => note(c, 880, 0, 0.05, { f2: 660, g: 0.05 }),
+    tab: c => { note(c, 520, 0, 0.07, { type: "triangle", g: 0.07 }); note(c, 780, 0.03, 0.06, { type: "triangle", g: 0.04 }); },
+    toggleOn: c => note(c, 600, 0, 0.08, { f2: 1150, g: 0.08 }),
+    toggleOff: c => note(c, 900, 0, 0.08, { f2: 480, g: 0.06 }),
+    done: c => { bell(c, 1046.5, 0, 0.45, 0.11); bell(c, 1318.5, 0.08, 0.6, 0.11); },
+    save: c => { bell(c, 784, 0, 0.35, 0.08); bell(c, 1174.7, 0.01, 0.4, 0.06); },
+    remove: c => note(c, 520, 0, 0.14, { f2: 240, type: "triangle", g: 0.08 }),
+    error: c => { note(c, 220, 0, 0.09, { type: "square", g: 0.05, lp: 900 }); note(c, 196, 0.12, 0.12, { type: "square", g: 0.05, lp: 900 }); },
+    open: c => noise(c, 0, 0.18, { f: 300, f2: 2400, type: "bandpass", q: 1.2, g: 0.05 }),
+    fanfare: c => { [523.25, 659.25, 783.99].forEach((f, i) => { note(c, f, i * 0.09, 0.3, { type: "triangle", g: 0.12 }); note(c, f * 2, i * 0.09, 0.2, { g: 0.03 }); });
+      bell(c, 1046.5, 0.27, 1.1, 0.13); note(c, 523.25, 0.27, 1.0, { type: "triangle", g: 0.06 });
+      [2093, 2637, 3136, 2637].forEach((f, i) => note(c, f, 0.45 + i * 0.07, 0.25, { g: 0.025 })); },
+    levelup: c => { note(c, 600, 0, 0.5, { f2: 1600, type: "triangle", g: 0.08 }); [1568, 1975.5, 2349.3, 3136].forEach((f, i) => bell(c, f, 0.35 + i * 0.06, 0.4, 0.04)); },
+    issue: c => { [392, 523.25, 659.25, 783.99].forEach((f, i) => note(c, f, i * 0.12, i === 3 ? 0.9 : 0.22, { type: "sawtooth", g: 0.07, lp: 1800, a: 0.02 }));
+      note(c, 196, 0.36, 0.9, { type: "sawtooth", g: 0.04, lp: 700, a: 0.03 }); },
+    swell: c => { noise(c, 0, 0.9, { f: 200, f2: 1400, g: 0.05 }); [440, 554.4, 659.3].forEach(f => note(c, f, 0.05, 0.9, { g: 0.035, a: 0.35 })); },
+    unswell: c => { noise(c, 0, 0.6, { f: 1200, f2: 250, g: 0.04 }); note(c, 554.4, 0, 0.5, { f2: 440, g: 0.04, a: 0.1 }); },
+    pluck: c => { note(c, 880, 0, 0.35, { type: "triangle", g: 0.09, a: 0.002 }); note(c, 1318.5, 0.05, 0.4, { type: "triangle", g: 0.06, a: 0.002 }); },
+    link: c => { note(c, 659.3, 0, 0.25, { type: "triangle", g: 0.08, a: 0.002 }); note(c, 987.8, 0.09, 0.35, { type: "triangle", g: 0.08, a: 0.002 }); },
+    lock: c => { note(c, 180, 0, 0.06, { type: "square", g: 0.05, lp: 1200 }); note(c, 120, 0.05, 0.08, { type: "square", g: 0.05, lp: 900 }); },
+    unlock: c => { note(c, 160, 0, 0.05, { type: "square", g: 0.05, lp: 1200 }); bell(c, 1318.5, 0.08, 0.45, 0.07); },
+    send: c => noise(c, 0, 0.25, { f: 2400, f2: 400, type: "bandpass", q: 1.5, g: 0.06 }),
+    down: c => { note(c, 660, 0, 0.25, { f2: 440, type: "triangle", g: 0.07 }); },
+  };
+  function play(name, opt){
+    try {
+      const c = ac(); if (!c || !lib[name]) return;
+      if (name === "tap" || name === "tab") { const now = Date.now(); if (now - lastTap < 45) return; lastTap = now; }
+      if (name === "error") { const now = Date.now(); if (now - lastErr < 500) return; lastErr = now; }
+      lib[name](c, opt);
+    } catch (e) {}
+  }
+  // 場面の見分け:アプリごとの [選び方, 音] の並び(上から順に見る)
+  let rules = [];
+  function soundFor(el){
+    for (const [sel, snd] of rules) { const hit = el.closest(sel); if (hit) return typeof snd === "function" ? snd(hit) : snd; }
+    const inp = el.closest("input");
+    if (inp && (inp.type === "checkbox" || inp.type === "radio")) return inp.checked ? "toggleOn" : "toggleOff";
+    if (el.closest("nav button, [role=tab], .tabs button")) return "tab";
+    if (el.closest("button, a[href], summary, .chip-b, [data-v]")) return "tap";
+    return null;
+  }
+  function init(appRules){
+    rules = appRules || [];
+    document.addEventListener("click", e => { const s = e.target && e.target.closest ? soundFor(e.target) : null; if (s) play(s); }, true);
+    // エラーの表示(class="err")が出たら、低い音
+    try {
+      new MutationObserver(ms => { for (const m of ms) { const el = m.target.nodeType === 1 ? m.target : m.target.parentElement; if (!el || !el.closest) continue;
+        const er = el.closest(".err"); if (er && (er.textContent || "").trim()) { play("error"); break; } } })
+        .observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["class"] });
+    } catch (e) {}
+  }
+  // 設定の欄(入/切・音量)。アプリの版の表示のそばに置く
+  function mount(anchor){
+    if (!anchor || document.getElementById("se-row")) return;
+    const row = document.createElement("div"); row.id = "se-row"; row.className = "se-row";
+    row.innerHTML = '<span>効果音</span><button type="button" id="se-on" class="se-btn"></button><label class="se-vol">音量 <input id="se-vol" type="range" min="0" max="1" step="0.05"></label>';
+    anchor.parentNode.insertBefore(row, anchor.nextSibling);
+    const b = row.querySelector("#se-on"), r = row.querySelector("#se-vol");
+    const show = () => { b.textContent = on ? "入" : "切"; b.setAttribute("aria-pressed", String(on)); r.value = vol; r.disabled = !on; };
+    b.addEventListener("click", () => { on = !on; try { localStorage.setItem("se-on", on ? "1" : "0"); } catch (e) {} show(); if (on) play("toggleOn"); });
+    r.addEventListener("input", () => { vol = +r.value; try { localStorage.setItem("se-vol", String(vol)); } catch (e) {} });
+    r.addEventListener("change", () => play("done"));
+    show();
+  }
+  return { play, init, mount, soundFor, get on(){ return on; } };
+})();
+
+SE.init([
+  ['[data-act="example"], [data-act="cy-example"]', 'levelup'],
+  ['#saveBtn', 'send'],
+  ['[data-pv="check"]', el => el.getAttribute('aria-pressed') === 'true' ? 'down' : 'done'],
+  ['[data-pv="pick"], [data-act="add"][data-type="do"], [data-act="cy-add"], [data-act="rule-add"], [data-act="addopt"], [data-act="dup"], [data-act="dupitem"]', 'pluck'],
+  ['[data-act="add"][data-type="branch"], [data-act="ln-add"], [data-act="rg-set"]', 'link'],
+  ['[data-act="del"], [data-act="delopt"], [data-act="delitem"], [data-act="cy-rm"], [data-act="rule-rm"], [data-act="cy-del"], [data-act="rg-del"]', 'remove'],
+  ['[data-act="newitem"], [data-act="rg-new"], [data-act="cy-new-for"], [data-act="open"], [data-act="cy-open"], [data-act="rg-open"], [data-act="openpart"], #cGo', 'open'],
+  ['[data-act="back"]', 'down'],
+  ['[data-pv="cy"], [data-tab]', 'tab'],
+]);
+// 効果音の入/切・音量は、接続の欄の版の表示のそばに置く(行軍表・省・思案と共通の設定)
+(function(){ const go = () => SE.mount(document.querySelector('#conn .row'));
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go(); })();
 </script>
 </body>
 </html>

@@ -100,7 +100,7 @@ const test = (name, fn) => tests.push([name, fn]);
 
 test('版が出て、データが無いときは最初の保存で作ると出る', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  assert.match($(dom, '#ver').textContent, /今開いている版:2/);
+  assert.match($(dom, '#ver').textContent, /今開いている版:3/);
   assert.match(status(dom), /最初に保存したときに作ります/);
   assert.match($(dom, '.empty').textContent, /手順書がまだありません/);
   assert.strictEqual($(dom, '#bar').hidden, true);
@@ -425,10 +425,9 @@ test('サイクル:タスクの定義(取り込み・アプリで足したもの
   await buildExample(dom);
   const pid = dom.window.TJ.S.data.procs[0].id;
   tabTo(dom, 'cycles');
-  const groups = $$(dom, '#cyTask optgroup').map(g => g.label + ':' + [...g.querySelectorAll('option')].map(o => o.textContent).join(','));
-  assert.deepStrictEqual(groups, ['英語:英語の長文,Anki英単語', '数学:数学演習']);
-  $(dom, '#cyTask').value = 't1';
-  click(dom, $(dom, '[data-act="cy-new"]'));
+  const items = () => $$(dom, '#tpl-cy .tp-item').map(b => b.querySelector('b').textContent + '/' + b.querySelector('span').textContent);
+  assert.deepStrictEqual(items(), ['Anki英単語/英語', '英語の長文/英語', '数学演習/数学']);
+  click(dom, $(dom, '#tpl-cy [data-tid="t1"]'));
   assert.match($(dom, '.edhead h2').textContent, /英語の長文のサイクル/);
   for (const n of ['過去の語彙', '未来の語彙', '長文']) {
     click(dom, $(dom, '[data-act="cy-add"]'));
@@ -455,13 +454,13 @@ test('サイクル:タスクの定義(取り込み・アプリで足したもの
   assert.strictEqual(c.anchorDate, TODAY); assert.strictEqual(c.anchorIndex, 0);
   // 作ったタスクは「作る」の選択肢から消える
   click(dom, $(dom, '[data-act="back"]'));
-  assert(!$$(dom, '#cyTask option').some(o => o.value === 't1'));
+  assert(!$(dom, '#tpl-cy [data-tid="t1"]'));
 });
 
 test('サイクル:行軍表で作ったサイクルの中身を写せる(始まりもそのまま)', async () => {
   const gh = makeGH(); withTasks(gh); const dom = await open(gh);
   tabTo(dom, 'cycles');
-  $(dom, '#cyTask').value = 't2'; click(dom, $(dom, '[data-act="cy-new"]'));
+  click(dom, $(dom, '#tpl-cy [data-tid="t2"]'));
   assert.match($(dom, '#ed').textContent, /行軍表で作ったサイクルがあります\(過去の語彙 → 未来の語彙 → 長文\)/);
   click(dom, $(dom, '[data-act="cy-copyold"]'));
   assert.deepStrictEqual($$(dom, '[data-cf="iname"]').map(i => i.value), ['過去の語彙', '未来の語彙', '長文']);
@@ -475,7 +474,8 @@ test('結びつき:タスクに手順書を結びつけ、手順書を消すと�
   const pid = dom.window.TJ.S.data.procs[0].id;
   tabTo(dom, 'links');
   assert.match($(dom, '.empty').textContent, /まだ結びつきがありません/);
-  change(dom, $(dom, '[data-sel="lnadd"]'), 't3');
+  click(dom, $(dom, '#tpl-ln [data-tid="t3"]'));
+  assert.match($(dom, '#status').textContent, /「数学演習」を足しました/);
   change(dom, $(dom, '[data-sel="link"][data-tid="t3"]'), pid);
   assert.match($(dom, '.lrow').textContent, /数学演習/);
   // サイクルも作って中身に結びつける
@@ -509,6 +509,103 @@ test('版1の下書きを読み込める', async () => {
 test('1日の区切りは日本時間の朝5時', async () => {
   assert.strictEqual(Core.taskDay(new Date('2026-10-09T19:59:00Z')), '2026-10-09'); // 10日 4:59
   assert.strictEqual(Core.taskDay(new Date('2026-10-09T20:00:00Z')), '2026-10-10'); // 10日 5:00
+});
+
+
+/* ---------- 版3:絞り込み・例・効果音 ---------- */
+test('タスクを選ぶところ:名前(ひらがな・カタカナを区別しない)と省で絞り込める', async () => {
+  const gh = makeGH(); withTasks(gh); const dom = await open(gh);
+  tabTo(dom, 'cycles');
+  const names = () => $$(dom, '#tpl-cy .tp-item b').map(e => e.textContent);
+  type(dom, $(dom, '[data-tq="cy"]'), '英');
+  assert.deepStrictEqual(names(), ['Anki英単語', '英語の長文']);
+  type(dom, $(dom, '[data-tq="cy"]'), '英 長');
+  assert.deepStrictEqual(names(), ['英語の長文']);
+  type(dom, $(dom, '[data-tq="cy"]'), 'なにもない');
+  assert.match($(dom, '#tpl-cy').textContent, /当てはまるタスクがありません/);
+  type(dom, $(dom, '[data-tq="cy"]'), '');
+  change(dom, $(dom, '[data-tmin="cy"]'), '数学');
+  assert.deepStrictEqual(names(), ['数学演習']);
+  // 絞り込みは描き直しても残る
+  tabTo(dom, 'procs'); tabTo(dom, 'cycles');
+  assert.strictEqual($(dom, '[data-tmin="cy"]').value, '数学');
+  assert.deepStrictEqual(names(), ['数学演習']);
+});
+
+test('カタカナで探してもひらがなの名前に当たる', async () => {
+  const gh = makeGH();
+  gh.set('roadmap/tasks/defs.json', { version: 1, tasks: [{ id: 'a', name: 'えいたんご', ministries: ['英語'] }, { id: 'b', name: 'スクワット', ministries: ['健康'] }] });
+  const dom = await open(gh);
+  tabTo(dom, 'links');
+  type(dom, $(dom, '[data-tq="ln"]'), 'エイ');
+  assert.deepStrictEqual($$(dom, '#tpl-ln .tp-item b').map(e => e.textContent), ['えいたんご']);
+  type(dom, $(dom, '[data-tq="ln"]'), 'すく');
+  assert.deepStrictEqual($$(dom, '#tpl-ln .tp-item b').map(e => e.textContent), ['スクワット']);
+});
+
+test('タスクが多いときは30件までにして、絞り込むよう知らせる', async () => {
+  const gh = makeGH();
+  gh.set('roadmap/tasks/defs.json', { version: 1, tasks: Array.from({ length: 45 }, (_, i) => ({ id: 'x' + i, name: 'タスク' + String(i).padStart(2, '0'), ministries: ['英語'] })) });
+  const dom = await open(gh);
+  tabTo(dom, 'cycles');
+  assert.strictEqual($$(dom, '#tpl-cy .tp-item').length, 30);
+  assert.match($(dom, '#tpl-cy').textContent, /ほかに 15件あります/);
+});
+
+test('例:手順書の例を入れると、範囲と部品の例も一緒に入り、見本で動きが分かる', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  assert($(dom, '.guide').open, 'はじめは使い方が開いている');
+  click(dom, $(dom, '[data-act="example"]'));
+  assert.strictEqual($(dom, '.edhead .name').value, '例:長文の日');
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3', '4', '4-a', '4-b']);
+  assert.strictEqual($(dom, '#pv .rng').textContent, '例の単語帳 401〜500番');
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 50分〜55分/);
+  click(dom, $$(dom, '#pv [data-pv="pick"]')[1]);
+  assert.match($(dom, '#pv').textContent, /間違えた設問の理由を書く/);
+  // もう一度押しても増えない
+  click(dom, $(dom, '[data-act="back"]'));
+  assert(!$(dom, '.guide').open, '手順書があれば使い方は閉じている');
+  click(dom, $(dom, '[data-act="example"]'));
+  assert.match($(dom, '#status').textContent, /例はもう入っています/);
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const d = gh.json(DATA);
+  assert.deepStrictEqual([d.procs.length, d.parts.length, d.ranges.length], [1, 1, 1]);
+  assert.strictEqual(d.procs[0].steps[3].partId, d.parts[0].id);
+});
+
+test('例:範囲・部品のタブだけで入れることもでき、サイクルは空のときだけ例を入れられる', async () => {
+  const gh = makeGH(); withTasks(gh); const dom = await open(gh);
+  tabTo(dom, 'parts'); click(dom, $(dom, '[data-act="example"]'));
+  assert.strictEqual($(dom, '.edhead .name').value, '例:Ankiに追加');
+  tabTo(dom, 'ranges'); click(dom, $(dom, '[data-act="example"]'));
+  assert.strictEqual($(dom, '#pv .big').textContent, '401〜500番');
+  tabTo(dom, 'cycles'); click(dom, $(dom, '#tpl-cy [data-tid="t1"]'));
+  click(dom, $(dom, '[data-act="cy-example"]'));
+  assert.deepStrictEqual($$(dom, '[data-cf="iname"]').map(i => i.value), ['過去の語彙', '未来の語彙', '長文']);
+  assert.deepStrictEqual($$(dom, '[data-cf="rule"]').map(i => i.value), ['未実行が3日以上続いたとき', '試験前の週']);
+  assert.strictEqual($(dom, '[data-act="cy-example"]'), null, '中身があれば例のボタンは出ない');
+});
+
+test('効果音:行軍表と同じ仕組みで、入/切と音量は接続の欄にある(音が出せない所でも止まらない)', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  assert(dom.window.document.getElementById('se-row'), '入/切の欄がある');
+  assert(dom.window.document.querySelector('#conn #se-row'));
+  const SE = dom.window.eval('SE');
+  assert.strictEqual(SE.soundFor($(dom, '[data-act="example"]')), 'levelup');
+  assert.strictEqual(SE.soundFor($(dom, '[data-act="newitem"]')), 'open');
+  assert.strictEqual(SE.soundFor($(dom, '[data-tab="cycles"]')), 'tab');
+  click(dom, $(dom, '[data-act="newitem"]'));
+  assert.strictEqual(SE.soundFor($(dom, '[data-act="add"][data-type="do"]')), 'pluck');
+  assert.strictEqual(SE.soundFor($(dom, '[data-act="add"][data-type="branch"]')), 'link');
+  assert.strictEqual(SE.soundFor($(dom, '[data-act="del"]')), 'remove');
+  assert.strictEqual(SE.soundFor($(dom, '#saveBtn')), 'send');
+  const ck = $(dom, '#pv [data-pv="check"]');
+  assert.strictEqual(SE.soundFor(ck), 'done');
+  click(dom, ck);
+  assert.strictEqual(SE.soundFor($(dom, '#pv [data-pv="check"]')), 'down');
+  // 切にすると覚える(行軍表・省・思案と同じ鍵)
+  click(dom, $(dom, '#se-on'));
+  assert.strictEqual(dom.window.localStorage.getItem('se-on'), '0');
 });
 
 (async () => {
