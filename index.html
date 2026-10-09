@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>手順録</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#1D2730">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E4E9EC; --sheet:#FBFCFC; --ink:#1D2730; --sub:#5A6670; --line:#C3CDD3;
+  --accent:#2B57A3; --fork:#A0600C; --forkbg:#F5ECDF; --ok:#2E7A57; --warn:#B0322A;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
+  font-size:16px;line-height:1.6;
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) calc(72px + env(safe-area-inset-bottom,0)) env(safe-area-inset-left,0)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* 上の帯 */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;background:var(--ink);color:#fff}
+.top h1{margin:0;font-size:1.25rem;letter-spacing:.08em}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;flex:1}
+.tabs button{background:none;border:0;color:#B9C5CD;padding:6px 10px;border-radius:4px}
+.tabs button[aria-current="page"]{color:#fff;background:#33414C}
+.connbtn{background:none;border:1px solid #6A7A86;color:#fff;border-radius:4px;padding:4px 10px;font-size:.875rem}
+.status{padding:6px 16px;font-size:.875rem;color:var(--sub);min-height:1.6em}
+.status.err{color:var(--warn);font-weight:700}
+
+main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
+
+/* 接続 */
+.conn{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin:8px 0 12px;max-width:560px}
+.conn h2{margin:0 0 8px;font-size:1rem}
+.conn label{display:block;margin:6px 0;font-size:.875rem;color:var(--sub)}
+.conn input{display:block;width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--ink);font-size:1rem}
+.conn .row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.ver{font-size:.875rem;color:var(--sub)}
+
+.btn{border:1px solid var(--ink);background:#fff;border-radius:4px;padding:6px 12px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.quiet{border-color:var(--line);color:var(--sub)}
+.btn.danger{border-color:var(--warn);color:var(--warn)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* 一覧 */
+.listhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 12px;flex-wrap:wrap}
+.listhead h2{margin:0;font-size:1.125rem}
+.plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.pcard{text-align:left;background:var(--sheet);border:1px solid var(--line);border-left:4px solid var(--ink);border-radius:4px;padding:10px 12px}
+.pcard:hover{border-color:var(--ink)}
+.pcard b{display:block;font-size:1.0625rem}
+.pcard span{font-size:.8125rem;color:var(--sub)}
+.pcard .unsaved{color:var(--fork);font-weight:700}
+.empty{color:var(--sub);background:var(--sheet);border:1px dashed var(--line);border-radius:6px;padding:18px}
+
+/* 編集 */
+.edhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 12px}
+.edhead .name{flex:1 1 220px;font-size:1.25rem;font-weight:700;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+.pvwrap{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto}
+@media (max-width:760px){
+  .grid{grid-template-columns:1fr;gap:12px}
+  .pvwrap{top:0;max-height:42vh;z-index:5;box-shadow:0 6px 10px -8px rgba(29,39,48,.5)}
+  .top{padding:8px 12px}
+  .connbtn{margin-left:auto}
+  .tabs{order:3;flex:1 0 100%;flex-wrap:nowrap;overflow-x:auto}
+  .tabs button{white-space:nowrap}
+  .edhead .name{flex-basis:100%;order:-1}
+  .edhead [data-act="back"]{margin-right:auto}
+}
+
+/* 見本 */
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:12px 14px 14px}
+.sheet .sh-title{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:10px}
+.sheet .sh-title b{font-size:1.0625rem}
+.sheet .sh-title span{font-size:.8125rem;color:var(--sub)}
+.sheet .sh-note{font-size:.75rem;color:var(--sub);margin:0 0 8px}
+.pv-list{list-style:none;margin:0;padding:0 0 0 26px;position:relative}
+.pv-list::before{content:"";position:absolute;left:9px;top:8px;bottom:8px;width:2px;background:var(--ink)}
+.pv-list.inner{margin:6px 0 2px;padding-left:24px}
+.pv-list.inner::before{background:var(--fork)}
+.pv-step{position:relative;padding:3px 0 9px}
+.pv-num{font-weight:700;margin-right:6px;font-variant-numeric:tabular-nums}
+.pv-check{position:absolute;left:-26px;top:4px;width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);background:var(--sheet);padding:0}
+.pv-list.inner > .pv-step > .pv-check{left:-24px;border-color:var(--fork)}
+.pv-step.done > .pv-check{background:var(--ok);border-color:var(--ok)}
+.pv-step.done > .pv-body .pv-text{color:var(--sub);text-decoration:line-through;text-decoration-color:var(--line)}
+.pv-body{cursor:pointer}
+.pv-min{font-size:.8125rem;color:var(--sub);margin-left:6px;white-space:nowrap}
+.pv-blank{color:var(--sub)}
+.pv-step.br > .pv-mark{position:absolute;left:-23px;top:7px;width:14px;height:14px;background:var(--fork);transform:rotate(45deg)}
+.pv-q{font-weight:700}
+.pv-opts{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.pv-opts button{border:1.5px solid var(--fork);color:var(--fork);background:#fff;border-radius:999px;padding:2px 12px;font-size:.9375rem}
+.pv-opts button[aria-pressed="true"]{background:var(--fork);color:#fff}
+.pv-hint{font-size:.8125rem;color:var(--sub);margin:2px 0 0}
+.rng{display:inline-block;border:1px solid var(--accent);color:var(--accent);border-radius:3px;padding:0 5px;font-size:.875em;line-height:1.4}
+
+/* 手順の並び */
+.st{background:#fff;border:1px solid var(--line);border-left:4px solid var(--ink);border-radius:4px;padding:8px 10px;margin:0 0 8px}
+.st.br{background:var(--forkbg);border-left-color:var(--fork)}
+.st.pt{border-left-color:var(--accent)}
+.st.flash{outline:3px solid var(--accent)}
+.st-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.st-num{font-weight:700;min-width:2.2em;font-variant-numeric:tabular-nums}
+.st-kind{font-size:.8125rem;color:var(--sub)}
+.st.br > .st-head .st-kind{color:var(--fork);font-weight:700}
+.tools{margin-left:auto;display:flex;gap:4px}
+.tools button{border:1px solid var(--line);background:#fff;border-radius:4px;min-width:34px;height:30px;padding:0 6px;font-size:.8125rem;color:var(--sub)}
+.tools button:disabled{opacity:.35;cursor:default}
+.st textarea,.st input[type=text]{width:100%;border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:#fff;resize:vertical}
+.st textarea{min-height:2.6em;line-height:1.5}
+.min{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:.875rem;color:var(--sub)}
+.min input{width:5.5em;border:1px solid var(--line);border-radius:4px;padding:4px 6px;background:#fff}
+.opt{border-left:2px dashed var(--fork);margin:10px 0 4px 2px;padding-left:10px}
+.opt-head{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.opt-head input{flex:1}
+.opt-head span{font-size:.8125rem;color:var(--fork);white-space:nowrap}
+.opt-head button{border:1px solid var(--line);background:#fff;border-radius:4px;font-size:.8125rem;color:var(--sub);padding:3px 8px;white-space:nowrap}
+.addbar{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 4px}
+.addbar button{border:1px dashed var(--sub);background:transparent;border-radius:4px;padding:4px 10px;font-size:.875rem;color:var(--ink)}
+.addbar button.fork{border-color:var(--fork);color:var(--fork)}
+.st.br > .addopt{border:1px dashed var(--fork);background:transparent;color:var(--fork);border-radius:4px;padding:3px 10px;font-size:.875rem;margin-top:2px}
+.merge{font-size:.75rem;color:var(--sub);margin:6px 0 0}
+
+/* 準備中 */
+.later{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:16px;max-width:620px}
+
+/* 保存の帯 */
+.bar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0));background:var(--ink);color:#fff;z-index:20}
+.bar[hidden]{display:none}
+.bar .btn.primary{border-color:#fff}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>手順録</h1>
+  <nav class="tabs" id="tabs" aria-label="タブ"></nav>
+  <button class="connbtn" id="connToggle" type="button">接続</button>
+</header>
+<div class="status" id="status" role="status" aria-live="polite"></div>
+<main>
+  <section class="conn" id="conn" hidden>
+    <h2>接続</h2>
+    <label>リポジトリ(持ち主/名前)<input id="cRepo" type="text" autocomplete="off" spellcheck="false" placeholder="nisenonamae/notion-daily"></label>
+    <label>トークン<input id="cToken" type="password" autocomplete="off" spellcheck="false"></label>
+    <div class="row">
+      <button class="btn primary" id="cGo" type="button">つないで読み込む</button>
+      <span class="ver" id="ver"></span>
+    </div>
+  </section>
+  <div id="view"></div>
+</main>
+<div class="bar" id="bar" hidden>
+  <span id="barText"></span>
+  <button class="btn primary" id="saveBtn" type="button">保存する</button>
+</div>
+
+<script>
+'use strict';
+const APP_VERSION = 1;
+const DATA_PATH = 'roadmap/apps/tejunroku/data.json';
+const LS_CONN = 'tejunroku.conn';
+const LS_CACHE = 'tejunroku.cache';
+const DEFAULT_REPO = 'nisenonamae/notion-daily';
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => p + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
+
+/* ---------- データの形 ---------- */
+function emptyData() { return { version: 1, procs: [], ranges: [], parts: [], cycles: [], links: {} }; }
+function normSteps(steps) {
+  if (!Array.isArray(steps)) return [];
+  return steps.filter(s => s && typeof s === 'object').map(s => {
+    s.id = s.id || uid('s');
+    if (s.type === 'branch') {
+      s.question = s.question || '';
+      s.options = (Array.isArray(s.options) ? s.options : []).map(o => {
+        o = o && typeof o === 'object' ? o : {};
+        o.id = o.id || uid('o'); o.label = o.label || ''; o.steps = normSteps(o.steps);
+        return o;
+      });
+    } else if (s.type === 'part') {
+      s.partId = s.partId || '';
+    } else {
+      s.type = 'do'; s.text = s.text || '';
+      s.min = (s.min === '' || s.min == null || isNaN(+s.min)) ? null : +s.min;
+    }
+    return s;
+  });
+}
+function normalize(d) {
+  d = d && typeof d === 'object' ? d : {};
+  const e = emptyData();
+  for (const k of Object.keys(e)) if (d[k] == null || typeof d[k] !== typeof e[k] || Array.isArray(d[k]) !== Array.isArray(e[k])) d[k] = e[k];
+  d.procs = d.procs.filter(p => p && typeof p === 'object').map(p => {
+    p.id = p.id || uid('p'); p.name = p.name || ''; p.steps = normSteps(p.steps); return p;
+  });
+  return d;
+}
+
+/* ---------- 文字と base64 ---------- */
+const b64enc = s => btoa(unescape(encodeURIComponent(s)));
+const b64dec = b => decodeURIComponent(escape(atob(String(b).replace(/\s/g, ''))));
+
+/* ---------- GitHub ---------- */
+function getConn() { try { return JSON.parse(localStorage.getItem(LS_CONN)) || {}; } catch (e) { return {}; } }
+function httpErr(status) { const e = new Error(''); e.status = status; return e; }
+function errMsg(e) {
+  const s = e && e.status;
+  if (s === 401) return 'トークンが正しくありません。接続の欄で入れ直してください。';
+  if (s === 403) return 'このトークンでは書き込めません(権限か、回数の上限)。';
+  if (s === 404) return 'リポジトリが見つかりません。接続の欄を確かめてください。';
+  if (s === 409 || s === 422) return '他の端末の保存と3回続けてぶつかりました。少し待ってからもう一度保存してください。';
+  if (s === 'noconn') return 'まだつないでいません。接続の欄でリポジトリとトークンを入れてください。';
+  if (s) return 'GitHubとのやりとりに失敗しました(' + s + ')。';
+  return 'GitHubにつながりませんでした。電波を確かめて、もう一度試してください。';
+}
+const gh = {
+  url(path) {
+    const c = getConn();
+    return 'https://api.github.com/repos/' + c.repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+  },
+  headers() { return { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + getConn().token }; },
+  check() { const c = getConn(); if (!c.repo || !c.token) throw httpErr('noconn'); },
+  async read(path) {
+    this.check();
+    const r = await fetch(this.url(path), { headers: this.headers(), cache: 'no-store' });
+    if (r.status === 404) {
+      // ファイルが無いのか、リポジトリが無いのかを見分ける
+      const c = getConn();
+      const rr = await fetch('https://api.github.com/repos/' + c.repo, { headers: this.headers(), cache: 'no-store' });
+      if (!rr.ok) throw httpErr(rr.status);
+      return { json: null, sha: null };
+    }
+    if (!r.ok) throw httpErr(r.status);
+    const j = await r.json();
+    return { json: JSON.parse(b64dec(j.content || '') || 'null'), sha: j.sha };
+  },
+  async write(path, obj, sha, message) {
+    this.check();
+    const body = { message, content: b64enc(JSON.stringify(obj, null, 2) + '\n') };
+    if (sha) body.sha = sha;
+    const r = await fetch(this.url(path), { method: 'PUT', headers: Object.assign(this.headers(), { 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+    if (!r.ok) throw httpErr(r.status);
+    const j = await r.json();
+    return j.content && j.content.sha;
+  }
+};
+// 読み直し→変更を当てる→書く。ぶつかったら最大3回
+async function commit(mutate, message) {
+  let last;
+  for (let i = 0; i < 3; i++) {
+    const { json, sha } = await gh.read(DATA_PATH);
+    const data = normalize(json);
+    mutate(data);
+    try {
+      const newSha = await gh.write(DATA_PATH, data, sha, message);
+      return { data, sha: newSha };
+    } catch (e) {
+      last = e;
+      if (e.status === 409 || e.status === 422) continue;
+      throw e;
+    }
+  }
+  throw last;
+}
+
+/* ---------- 手順の木の操作 ---------- */
+function walk(steps, fn) {
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (fn(s, steps, i) === false) return false;
+    if (s.type === 'branch') for (const o of s.options) if (walk(o.steps, fn) === false) return false;
+  }
+}
+function locate(proc, id) {
+  let r = null;
+  walk(proc.steps, (s, list, index) => { if (s.id === id) { r = { step: s, list, index }; return false; } });
+  return r;
+}
+function locateOpt(proc, optId) {
+  let r = null;
+  walk(proc.steps, s => {
+    if (s.type === 'branch') {
+      const index = s.options.findIndex(o => o.id === optId);
+      if (index >= 0) { r = { branch: s, option: s.options[index], index }; return false; }
+    }
+  });
+  return r;
+}
+function listByKey(proc, key) {
+  if (key === 'root') return proc.steps;
+  const r = locateOpt(proc, key);
+  return r ? r.option.steps : null;
+}
+function newStep(type) {
+  if (type === 'branch') return { id: uid('s'), type: 'branch', question: '', options: [
+    { id: uid('o'), label: 'はい', steps: [] }, { id: uid('o'), label: 'いいえ', steps: [] }] };
+  return { id: uid('s'), type: 'do', text: '', min: null };
+}
+function renewIds(step) {
+  const s = clone(step);
+  (function re(x) {
+    x.id = uid('s');
+    if (x.type === 'branch') for (const o of x.options) { o.id = uid('o'); o.steps.forEach(re); }
+  })(s);
+  return s;
+}
+const ops = {
+  add(proc, key, type) { const list = listByKey(proc, key); if (!list) return null; const s = newStep(type); list.push(s); return s; },
+  move(proc, id, dir) {
+    const l = locate(proc, id); if (!l) return false;
+    const j = l.index + dir; if (j < 0 || j >= l.list.length) return false;
+    l.list.splice(l.index, 1); l.list.splice(j, 0, l.step); return true;
+  },
+  remove(proc, id) { const l = locate(proc, id); if (!l) return false; l.list.splice(l.index, 1); return true; },
+  dup(proc, id) { const l = locate(proc, id); if (!l) return null; const c = renewIds(l.step); l.list.splice(l.index + 1, 0, c); return c; },
+  addOpt(proc, branchId) {
+    const l = locate(proc, branchId); if (!l || l.step.type !== 'branch') return null;
+    const o = { id: uid('o'), label: '', steps: [] }; l.step.options.push(o); return o;
+  },
+  removeOpt(proc, optId) {
+    const r = locateOpt(proc, optId); if (!r || r.branch.options.length <= 1) return false;
+    r.branch.options.splice(r.index, 1); return true;
+  }
+};
+
+/* ---------- 番号と時間 ---------- */
+function letter(c) { const a = 'abcdefghijklmnopqrstuvwxyz'; return c < 26 ? a[c] : String(c + 1); }
+// 1, 2, 2-a, 2-b(分かれ道の中は選択肢をまたいで続き番号), さらに中は 2-b-1…
+function numbering(steps) {
+  const map = {};
+  const sub = (br, L, depth) => {
+    let c = 0;
+    for (const o of br.options) for (const s of o.steps) {
+      const L2 = L + '-' + (depth % 2 === 1 ? letter(c) : String(c + 1));
+      c++; map[s.id] = L2;
+      if (s.type === 'branch') sub(s, L2, depth + 1);
+    }
+  };
+  steps.forEach((s, i) => { const L = String(i + 1); map[s.id] = L; if (s.type === 'branch') sub(s, L, 1); });
+  return map;
+}
+// 合計時間の幅(分かれ道は一番短い道〜一番長い道)。pick を渡すと選んだ道で数える
+function span(steps, data, pick, seen) {
+  seen = seen || new Set();
+  let lo = 0, hi = 0;
+  for (const s of steps) {
+    if (s.type === 'do') { const m = +s.min || 0; lo += m; hi += m; }
+    else if (s.type === 'branch') {
+      const chosen = pick && s.options.find(o => o.id === pick[s.id]);
+      const opts = chosen ? [chosen] : s.options;
+      if (opts.length) {
+        const rs = opts.map(o => span(o.steps, data, pick, seen));
+        lo += Math.min(...rs.map(r => r.lo)); hi += Math.max(...rs.map(r => r.hi));
+      }
+    } else if (s.type === 'part') {
+      const p = data && (data.parts || []).find(x => x.id === s.partId);
+      if (p && !seen.has(p.id)) { const r = span(p.steps || [], data, pick, new Set([...seen, p.id])); lo += r.lo; hi += r.hi; }
+    }
+  }
+  return { lo, hi };
+}
+function fmtMin(m) {
+  m = Math.round(m * 10) / 10;
+  if (m >= 60) { const h = Math.floor(m / 60), r = Math.round((m - h * 60) * 10) / 10; return h + '時間' + (r ? r + '分' : ''); }
+  return m + '分';
+}
+function fmtSpan(r) { if (!r.hi) return ''; return r.lo === r.hi ? fmtMin(r.lo) : fmtMin(r.lo) + '〜' + fmtMin(r.hi); }
+function countDo(steps) { let n = 0; walk(steps, s => { if (s.type === 'do') n++; }); return n; }
+function allPicked(steps, pick) {
+  let ok = true;
+  const rec = list => { for (const s of list) if (s.type === 'branch') {
+    const o = s.options.find(o => o.id === pick[s.id]); if (!o) { ok = false; return; } rec(o.steps); } };
+  rec(steps); return ok;
+}
+
+/* ---------- 状態 ---------- */
+const S = { data: emptyData(), sha: null, dirty: new Set(), removed: new Set(),
+  tab: 'procs', procId: null, pick: {}, checks: {}, saving: false, connOpen: false };
+const cur = () => S.data.procs.find(p => p.id === S.procId) || null;
+const getProc = id => S.data.procs.find(p => p.id === id) || null;
+function putProc(d, id, p) {
+  const i = d.procs.findIndex(x => x.id === id);
+  if (!p) { if (i >= 0) d.procs.splice(i, 1); return; }
+  if (i >= 0) d.procs[i] = clone(p); else d.procs.push(clone(p));
+}
+function applyLocal(d) {
+  for (const id of S.dirty) putProc(d, id, getProc(id));
+  for (const id of S.removed) putProc(d, id, null);
+}
+let cacheTimer = null;
+function saveCache() {
+  clearTimeout(cacheTimer); cacheTimer = null;
+  try { localStorage.setItem(LS_CACHE, JSON.stringify({ data: S.data, sha: S.sha, dirty: [...S.dirty], removed: [...S.removed] })); } catch (e) {}
+}
+function saveCacheSoon() { clearTimeout(cacheTimer); cacheTimer = setTimeout(saveCache, 400); }
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(LS_CACHE)); if (!c) return;
+    S.data = normalize(c.data); S.sha = c.sha || null;
+    S.dirty = new Set(c.dirty || []); S.removed = new Set(c.removed || []);
+  } catch (e) {}
+}
+function touch(id) { S.removed.delete(id); S.dirty.add(id); saveCacheSoon(); renderBar(); }
+function changeCount() { return S.dirty.size + S.removed.size; }
+
+function setStatus(msg, err) { const el = $('#status'); el.textContent = msg || ''; el.classList.toggle('err', !!err); }
+
+/* ---------- 読み込みと保存 ---------- */
+async function load() {
+  setStatus('読み込み中…');
+  try {
+    const { json, sha } = await gh.read(DATA_PATH);
+    const d = normalize(json);
+    applyLocal(d);
+    S.data = d; S.sha = sha;
+    setStatus(json ? '読み込みました。' : 'まだデータがありません。最初に保存したときに作ります。');
+  } catch (e) { setStatus(errMsg(e), true); if (e.status === 'noconn' || e.status === 401 || e.status === 404) S.connOpen = true; }
+  saveCache(); render();
+}
+async function save() {
+  if (!changeCount() || S.saving) return;
+  S.saving = true; renderBar(); setStatus('保存中…');
+  const snap = new Map([...S.dirty].map(id => [id, clone(getProc(id))]));
+  const rem = new Set(S.removed);
+  const names = [...snap.values()].filter(Boolean).map(p => p.name || '名前なし').slice(0, 3).join('・');
+  try {
+    const { data, sha } = await commit(d => {
+      for (const [id, p] of snap) putProc(d, id, p);
+      for (const id of rem) putProc(d, id, null);
+    }, '手順録: ' + (names || '手順書を消す'));
+    // 保存中に直したものは残す
+    for (const id of [...S.dirty]) {
+      const now = getProc(id);
+      if (snap.has(id) && JSON.stringify(now) === JSON.stringify(snap.get(id))) S.dirty.delete(id);
+      else putProc(data, id, now);
+    }
+    for (const id of rem) S.removed.delete(id);
+    for (const id of S.removed) putProc(data, id, null);
+    S.data = data; S.sha = sha;
+    setStatus('保存しました。');
+  } catch (e) { setStatus(errMsg(e), true); if (e.status === 'noconn' || e.status === 401) S.connOpen = true; }
+  S.saving = false; saveCache(); render();
+}
+
+/* ---------- 描画 ---------- */
+const TABS = [['procs', '手順書'], ['cycles', 'サイクル'], ['ranges', '範囲'], ['parts', '部品'], ['links', '結びつき']];
+function render() {
+  $('#tabs').innerHTML = TABS.map(([k, n]) => `<button type="button" data-tab="${k}"${S.tab === k ? ' aria-current="page"' : ''}>${n}</button>`).join('');
+  const conn = $('#conn'); conn.hidden = !S.connOpen;
+  $('#ver').textContent = '今開いている版:' + APP_VERSION;
+  const v = $('#view');
+  if (S.tab === 'procs') { if (cur()) renderEditor(v); else { S.procId = null; renderList(v); } }
+  else v.innerHTML = `<div class="later"><p style="margin:0">「${esc(TABS.find(t => t[0] === S.tab)[1])}」のタブは、次の段階で作ります。</p></div>`;
+  renderBar();
+}
+function renderBar() {
+  const n = changeCount();
+  $('#bar').hidden = n === 0;
+  $('#barText').textContent = S.saving ? '保存中…' : '保存していない変更:' + n + '件';
+  $('#saveBtn').disabled = S.saving;
+}
+function renderList(v) {
+  const ps = S.data.procs;
+  v.innerHTML = `<div class="listhead"><h2>手順書</h2><button class="btn primary" type="button" data-act="newproc">新しい手順書を作る</button></div>` +
+    (ps.length ? `<div class="plist">` + ps.map(p => {
+      const sp = fmtSpan(span(p.steps, S.data));
+      return `<button type="button" class="pcard" data-act="open" data-pid="${esc(p.id)}"><b>${esc(p.name || '名前なし')}</b>` +
+        `<span>やること ${countDo(p.steps)}つ${sp ? '・' + sp : ''}</span>` +
+        (S.dirty.has(p.id) ? ` <span class="unsaved">未保存</span>` : '') + `</button>`;
+    }).join('') + `</div>`
+      : `<p class="empty">手順書がまだありません。「新しい手順書を作る」から始めます。</p>`);
+}
+
+function renderEditor(v) {
+  const p = cur();
+  v.innerHTML = `<div class="edhead">
+      <button class="btn quiet" type="button" data-act="back">一覧へ</button>
+      <input class="name" type="text" data-f="name" value="${esc(p.name)}" placeholder="手順書の名前(例:長文の日)" aria-label="手順書の名前">
+      <button class="btn quiet" type="button" data-act="dupproc">複製</button>
+      <button class="btn danger" type="button" data-act="delproc">消す</button>
+    </div>
+    <div class="grid">
+      <div class="pvwrap"><div class="sheet" id="pv"></div></div>
+      <div id="ed"></div>
+    </div>`;
+  renderSteps();
+}
+function renderSteps() {
+  const p = cur(); if (!p) return;
+  const labels = numbering(p.steps);
+  const ed = $('#ed');
+  ed.innerHTML = edList(p.steps, 'root', labels);
+  ed.querySelectorAll('textarea').forEach(autosize);
+  renderPreview();
+}
+function tools(s, i, n) {
+  return `<span class="tools">
+    <button type="button" data-act="up" data-id="${s.id}" aria-label="上へ"${i === 0 ? ' disabled' : ''}>↑</button>
+    <button type="button" data-act="down" data-id="${s.id}" aria-label="下へ"${i === n - 1 ? ' disabled' : ''}>↓</button>
+    <button type="button" data-act="dup" data-id="${s.id}">複製</button>
+    <button type="button" data-act="del" data-id="${s.id}">消す</button></span>`;
+}
+function edList(steps, key, labels) {
+  return `<div class="ed-list" data-key="${key}">` + steps.map((s, i) => edStep(s, i, steps.length, labels)).join('') +
+    `<div class="addbar"><button type="button" data-act="add" data-type="do" data-key="${key}">＋ やること</button>` +
+    `<button type="button" class="fork" data-act="add" data-type="branch" data-key="${key}">＋ 分かれ道</button></div></div>`;
+}
+function edStep(s, i, n, labels) {
+  const head = kind => `<div class="st-head"><span class="st-num">${labels[s.id] || ''}</span><span class="st-kind">${kind}</span>${tools(s, i, n)}</div>`;
+  if (s.type === 'branch') {
+    return `<div class="st br" id="ed-${s.id}" data-id="${s.id}">${head('分かれ道')}
+      <input type="text" data-f="question" data-id="${s.id}" value="${esc(s.question)}" placeholder="問い(例:全問正解だった?)" aria-label="分かれ道の問い">` +
+      s.options.map(o => `<div class="opt" data-opt="${o.id}"><div class="opt-head"><span>選んだら</span>
+        <input type="text" data-f="label" data-opt="${o.id}" value="${esc(o.label)}" placeholder="選択肢の名前" aria-label="選択肢の名前">
+        <button type="button" data-act="delopt" data-opt="${o.id}"${s.options.length <= 1 ? ' disabled' : ''}>選択肢を消す</button></div>` +
+        edList(o.steps, o.id, labels) + `</div>`).join('') +
+      `<button type="button" class="addopt" data-act="addopt" data-id="${s.id}">＋ 選択肢</button>
+      <p class="merge">選んだ道が終わったら、分かれ道の次の手順へ合流します。</p></div>`;
+  }
+  if (s.type === 'part') {
+    const pt = S.data.parts.find(x => x.id === s.partId);
+    return `<div class="st pt" id="ed-${s.id}" data-id="${s.id}">${head('部品')}<div>${esc(pt ? pt.name : '見つからない部品')}</div></div>`;
+  }
+  return `<div class="st do" id="ed-${s.id}" data-id="${s.id}">${head('やること')}
+    <textarea data-f="text" data-id="${s.id}" rows="1" placeholder="やること(例:時間を計って解く)" aria-label="やること">${esc(s.text)}</textarea>
+    <label class="min">時間 <input type="number" inputmode="decimal" min="0" step="1" data-f="min" data-id="${s.id}" value="${s.min == null ? '' : s.min}"> 分</label></div>`;
+}
+function autosize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
+
+/* 見本 */
+function richText(t) {
+  return esc(t).replace(/\{([^{}]+)\}/g, (m, name) => `<span class="rng" title="範囲:実行するときは今日の範囲に置き換わります">${name}</span>`);
+}
+function renderPreview() {
+  const p = cur(); const pv = $('#pv'); if (!p || !pv) return;
+  const labels = numbering(p.steps);
+  const whole = fmtSpan(span(p.steps, S.data));
+  const hasBranch = JSON.stringify(p.steps).includes('"branch"');
+  let chosen = '';
+  if (hasBranch && allPicked(p.steps, S.pick)) { const c = fmtSpan(span(p.steps, S.data, S.pick)); chosen = c ? '選んだ道では ' + c : ''; }
+  pv.innerHTML = `<div class="sh-title"><b>${esc(p.name || '名前なし')}</b><span id="pvTotal">${whole ? '合計 ' + whole : ''}${chosen ? '(' + chosen + ')' : ''}</span></div>
+    <p class="sh-note">実行したときの見本です。丸を押すと済みの印、分かれ道は選ぶと先が出ます(どちらも保存はしません)。</p>` +
+    (p.steps.length ? pvList(p.steps, labels, false) : `<p class="pv-hint">右(スマホでは下)で手順を足すと、ここに出ます。</p>`);
+}
+function pvList(steps, labels, inner) {
+  return `<ol class="pv-list${inner ? ' inner' : ''}">` + steps.map(s => pvStep(s, labels)).join('') + `</ol>`;
+}
+function pvStep(s, labels) {
+  const num = `<span class="pv-num">${labels[s.id] || ''}</span>`;
+  if (s.type === 'branch') {
+    const o = s.options.find(o => o.id === S.pick[s.id]);
+    return `<li class="pv-step br" data-id="${s.id}"><span class="pv-mark"></span>
+      <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-q">${s.question ? richText(s.question) : '<span class="pv-blank">(問いを書いていません)</span>'}</span></div>
+      <div class="pv-opts">` + s.options.map(x => `<button type="button" data-pv="pick" data-id="${s.id}" data-opt="${x.id}" aria-pressed="${o === x}">${esc(x.label || '名前なし')}</button>`).join('') + `</div>` +
+      (o ? (o.steps.length ? pvList(o.steps, labels, true) : `<p class="pv-hint">この道には手順がありません。そのまま次へ進みます。</p>`)
+         : `<p class="pv-hint">選ぶと、その先の手順が出ます。</p>`) + `</li>`;
+  }
+  if (s.type === 'part') {
+    const pt = S.data.parts.find(x => x.id === s.partId);
+    return `<li class="pv-step pt" data-id="${s.id}"><div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-text">${esc(pt ? pt.name : '見つからない部品')}</span></div></li>`;
+  }
+  const done = !!S.checks[s.id];
+  return `<li class="pv-step do${done ? ' done' : ''}" data-id="${s.id}">
+    <button type="button" class="pv-check" data-pv="check" data-id="${s.id}" aria-pressed="${done}" aria-label="済みの印"></button>
+    <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-text">${s.text ? richText(s.text) : '<span class="pv-blank">(まだ書いていません)</span>'}</span>${s.min ? `<span class="pv-min">${fmtMin(+s.min)}</span>` : ''}</div></li>`;
+}
+let pvTimer = null;
+function renderPreviewSoon() { clearTimeout(pvTimer); pvTimer = setTimeout(renderPreview, 120); }
+
+/* ---------- 操作 ---------- */
+function openProc(id) { S.procId = id; S.pick = {}; S.checks = {}; render(); window.scrollTo(0, 0); }
+function focusStep(id) {
+  const el = document.getElementById('ed-' + id); if (!el) return;
+  const f = el.querySelector('textarea, input[type=text]'); if (f) f.focus({ preventScroll: true });
+  el.scrollIntoView && el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+function flash(id) {
+  const el = document.getElementById('ed-' + id); if (!el) return;
+  el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1200);
+  el.scrollIntoView && el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+function hasInner(step) { return step.type === 'branch' && step.options.some(o => o.steps.length); }
+
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab) { S.tab = tab.dataset.tab; render(); return; }
+  const pvb = e.target.closest('[data-pv]');
+  if (pvb) {
+    const id = pvb.dataset.id;
+    if (pvb.dataset.pv === 'pick') { S.pick[id] = S.pick[id] === pvb.dataset.opt ? undefined : pvb.dataset.opt; renderPreview(); }
+    else if (pvb.dataset.pv === 'check') { S.checks[id] = !S.checks[id]; renderPreview(); }
+    else if (pvb.dataset.pv === 'jump') flash(id);
+    return;
+  }
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const act = b.dataset.act, p = cur();
+  if (act === 'newproc') {
+    const np = { id: uid('p'), name: '', steps: [newStep('do')] };
+    S.data.procs.push(np); touch(np.id); openProc(np.id);
+    const n = $('.edhead .name'); if (n) n.focus();
+    return;
+  }
+  if (act === 'open') { openProc(b.dataset.pid); return; }
+  if (act === 'back') { S.procId = null; render(); return; }
+  if (!p) return;
+  if (act === 'dupproc') {
+    const c = clone(p); c.id = uid('p'); c.name = (p.name || '名前なし') + 'のコピー'; c.steps = c.steps.map(renewIds);
+    S.data.procs.splice(S.data.procs.indexOf(p) + 1, 0, c); touch(c.id); openProc(c.id); setStatus('複製しました。');
+    return;
+  }
+  if (act === 'delproc') {
+    if (!confirm('「' + (p.name || '名前なし') + '」を消しますか?(保存するまではGitHubには残ります)')) return;
+    S.data.procs.splice(S.data.procs.indexOf(p), 1);
+    S.dirty.delete(p.id); S.removed.add(p.id); saveCacheSoon(); S.procId = null; render();
+    return;
+  }
+  let focusId = null;
+  if (act === 'add') { const s = ops.add(p, b.dataset.key, b.dataset.type); if (!s) return; focusId = s.id; }
+  else if (act === 'up' || act === 'down') { if (!ops.move(p, b.dataset.id, act === 'up' ? -1 : 1)) return; }
+  else if (act === 'dup') { const c = ops.dup(p, b.dataset.id); if (!c) return; focusId = c.id; }
+  else if (act === 'del') {
+    const l = locate(p, b.dataset.id); if (!l) return;
+    if (hasInner(l.step) && !confirm('この分かれ道と、その中の手順をまとめて消しますか?')) return;
+    ops.remove(p, b.dataset.id);
+  }
+  else if (act === 'addopt') { const o = ops.addOpt(p, b.dataset.id); if (!o) return; touch(p.id); renderSteps(); const i = document.querySelector(`input[data-opt="${o.id}"]`); if (i) i.focus(); return; }
+  else if (act === 'delopt') {
+    const r = locateOpt(p, b.dataset.opt); if (!r) return;
+    if (r.option.steps.length && !confirm('この選択肢と、その中の手順をまとめて消しますか?')) return;
+    if (!ops.removeOpt(p, b.dataset.opt)) return;
+  }
+  else return;
+  touch(p.id); renderSteps();
+  if (focusId) focusStep(focusId);
+});
+
+document.addEventListener('input', e => {
+  const t = e.target, f = t.dataset && t.dataset.f; if (!f) return;
+  const p = cur(); if (!p) return;
+  if (f === 'name') p.name = t.value;
+  else if (f === 'label') { const r = locateOpt(p, t.dataset.opt); if (!r) return; r.option.label = t.value; }
+  else {
+    const l = locate(p, t.dataset.id); if (!l) return;
+    if (f === 'min') { const v = t.value.trim(); l.step.min = v === '' || isNaN(+v) ? null : Math.max(0, +v); }
+    else l.step[f] = t.value;
+  }
+  if (t.tagName === 'TEXTAREA') autosize(t);
+  touch(p.id); renderPreviewSoon();
+});
+
+$('#saveBtn').addEventListener('click', save);
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); }
+});
+$('#connToggle').addEventListener('click', () => { S.connOpen = !S.connOpen; render(); });
+$('#cGo').addEventListener('click', () => {
+  const repo = $('#cRepo').value.trim() || DEFAULT_REPO, token = $('#cToken').value.trim();
+  localStorage.setItem(LS_CONN, JSON.stringify({ repo, token }));
+  S.connOpen = false; load();
+});
+window.addEventListener('pagehide', saveCache);
+
+/* ---------- はじめ ---------- */
+function boot() {
+  const c = getConn();
+  $('#cRepo').value = c.repo || DEFAULT_REPO; $('#cToken').value = c.token || '';
+  loadCache(); render();
+  if (c.repo && c.token) load();
+  else { S.connOpen = true; render(); setStatus(errMsg({ status: 'noconn' }), true); }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js?v=' + APP_VERSION).catch(() => {});
+}
+window.TJ = { S, ops, numbering, span, fmtSpan, normalize, b64enc, b64dec, commit, load, save, render, APP_VERSION };
+boot();
+</script>
+</body>
+</html>
