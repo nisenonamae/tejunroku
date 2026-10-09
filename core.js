@@ -36,8 +36,10 @@
         });
       } else if (s.type === 'part') {
         s.partId = s.partId || '';
+      } else if (s.type === 'section') {
+        s.title = s.title || '';                      // 区切り:ここから次の区切りまでをひとまとまりとして見せる
       } else {
-        s.type = 'do'; s.text = s.text || ''; s.min = num(s.min, null);
+        s.type = 'do'; s.text = s.text || ''; s.min = num(s.min, null); s.max = num(s.max, null);   // 時間は 短いとき〜長いとき
       }
       return s;
     });
@@ -103,6 +105,7 @@
     const sub = (lists, L, depth) => {
       let c = 0;
       for (const list of lists) for (const s of list) {
+        if (s.type === 'section') continue;          // 区切りには番号を付けない
         const L2 = L + '-' + (depth % 2 === 1 ? letter(c) : String(c + 1));
         c++; map[s.id] = L2; kids(s, L2, depth + 1);
       }
@@ -111,14 +114,15 @@
       if (s.type === 'branch') sub(s.options.map(o => o.steps), L, depth);
       else if (s.type === 'part') sub([expandPart(s, data)], L, depth);
     };
-    steps.forEach((s, i) => { const L = String(i + 1); map[s.id] = L; kids(s, L, 1); });
+    let k = 0;
+    steps.forEach(s => { if (s.type === 'section') return; const L = String(++k); map[s.id] = L; kids(s, L, 1); });
     return map;
   }
   // 合計時間の幅(分かれ道は一番短い道〜一番長い道)。pick を渡すと選んだ道で数える
   function span(steps, data, pick) {
     let lo = 0, hi = 0;
     for (const s of steps) {
-      if (s.type === 'do') { const m = +s.min || 0; lo += m; hi += m; }
+      if (s.type === 'do') { const t = stepTime(s); lo += t.lo; hi += t.hi; }
       else if (s.type === 'branch') {
         const chosen = pick && s.options.find(o => o.id === pick[s.id]);
         const opts = chosen ? [chosen] : s.options;
@@ -131,6 +135,20 @@
       }
     }
     return { lo, hi };
+  }
+  // やること1つの時間。片方だけ書いてあればその値、両方なら 短いとき〜長いとき
+  function stepTime(s) {
+    const a = s.min === '' || s.min == null || isNaN(+s.min) ? null : +s.min;
+    const b = s.max === '' || s.max == null || isNaN(+s.max) ? null : +s.max;
+    if (a == null && b == null) return { lo: 0, hi: 0 };
+    const x = a == null ? b : a, y = b == null ? a : b;
+    return { lo: Math.max(0, Math.min(x, y)), hi: Math.max(0, x, y) };
+  }
+  // 区切り(steps[i])から次の区切りまでの時間
+  function sectionSpan(steps, i, data, pick) {
+    const part = [];
+    for (let j = i + 1; j < steps.length && steps[j].type !== 'section'; j++) part.push(steps[j]);
+    return span(part, data, pick);
   }
   function allPicked(steps, pick, data) {
     for (const s of steps) {
@@ -151,7 +169,14 @@
     if (m >= 60) { const h = Math.floor(m / 60), r = Math.round((m - h * 60) * 10) / 10; return h + '時間' + (r ? r + '分' : ''); }
     return m + '分';
   }
-  function fmtSpan(r) { if (!r.hi) return ''; return r.lo === r.hi ? fmtMin(r.lo) : fmtMin(r.lo) + '〜' + fmtMin(r.hi); }
+  // 10〜15分、50分〜1時間5分 のように出す
+  function fmtSpan(r) {
+    if (!r.hi) return '';
+    if (r.lo === r.hi) return fmtMin(r.lo);
+    if (r.hi < 60) return (Math.round(r.lo * 10) / 10) + '〜' + fmtMin(r.hi);
+    return fmtMin(r.lo) + '〜' + fmtMin(r.hi);
+  }
+  const fmtStep = s => fmtSpan(stepTime(s));
 
   /* ---------- 日付 ---------- */
   // 1日の区切りは日本時間の朝5時(行軍表の taskDay と同じ)
@@ -224,7 +249,7 @@
   }
 
   const api = { uid, clone, emptyData, normSteps, normalize, walk, expandPart, numbering, span, allPicked, hasBranch,
-    fmtMin, fmtSpan, taskDay, rangeAdvances, rangeState, rangeText, rangeSinceMonth, rangeNamesIn, RANGE_RE, taskList };
+    fmtMin, fmtSpan, fmtStep, stepTime, sectionSpan, taskDay, rangeAdvances, rangeState, rangeText, rangeSinceMonth, rangeNamesIn, RANGE_RE, taskList };
   root.TJCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

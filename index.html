@@ -90,14 +90,26 @@ main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
 .pv-list::before{content:"";position:absolute;left:9px;top:8px;bottom:8px;width:2px;background:var(--ink)}
 .pv-list.inner{margin:6px 0 2px;padding-left:24px}
 .pv-list.inner::before{background:var(--fork)}
-.pv-step{position:relative;padding:3px 0 9px}
-.pv-num{font-weight:700;margin-right:6px;font-variant-numeric:tabular-nums}
+.pv-step{position:relative;padding:4px 0 14px}
+.pv-num{font-weight:700;font-variant-numeric:tabular-nums}
 .pv-check{position:absolute;left:-26px;top:4px;width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);background:var(--sheet);padding:0}
 .pv-list.inner > .pv-step > .pv-check{left:-24px;border-color:var(--fork)}
 .pv-step.done > .pv-check{background:var(--ok);border-color:var(--ok)}
 .pv-step.done > .pv-body .pv-text{color:var(--sub);text-decoration:line-through;text-decoration-color:var(--line)}
-.pv-body{cursor:pointer}
-.pv-min{font-size:.8125rem;color:var(--sub);margin-left:6px;white-space:nowrap}
+.pv-body{cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:8px;align-items:baseline;line-height:1.65}
+.pv-text,.pv-q{white-space:pre-wrap;word-break:break-word}
+.pv-sec{margin:6px 0 12px -26px;padding:5px 10px;background:var(--ink);color:#fff;border-radius:4px;display:flex;justify-content:space-between;gap:10px;align-items:baseline;cursor:pointer;position:relative;z-index:1}
+.pv-list.inner > .pv-sec{margin-left:-24px;background:var(--sub)}
+.pv-sec-t{font-weight:700;letter-spacing:.04em}
+.pv-sec-t .pv-blank{color:#C9D2D8}
+.pv-sec-m{font-size:.8125rem;color:#D7DEE3;white-space:nowrap}
+.st.sec{border-left-color:var(--sub);background:#EEF1F3}
+.st.sec .st-kind{font-weight:700;color:var(--ink)}
+.addbar button.secb{border-color:var(--sub);color:var(--sub)}
+.pt-sum .pt-sec{list-style:none;margin-left:-1.4em;font-weight:700;color:var(--ink)}
+.min{flex-wrap:wrap}
+.min-hint{font-size:.75rem;color:var(--sub)}
+.pv-min{font-size:.8125rem;color:var(--sub);white-space:nowrap;background:var(--bg);border-radius:3px;padding:0 6px}
 .pv-blank{color:var(--sub)}
 .pv-step.br > .pv-mark{position:absolute;left:-23px;top:7px;width:14px;height:14px;background:var(--fork);transform:rotate(45deg)}
 .pv-q{font-weight:700}
@@ -230,7 +242,7 @@ details.addtask[open] summary{margin-bottom:8px}
 <script src="core.js"></script>
 <script>
 'use strict';
-const APP_VERSION = 3;
+const APP_VERSION = 4;
 const C = window.TJCore;
 const BASE = 'roadmap/apps/tejunroku';
 const DATA_PATH = BASE + '/data.json', RUNS_DIR = BASE + '/runs';
@@ -327,7 +339,8 @@ function listByKey(proc, key) { if (key === 'root') return proc.steps; const r =
 function newStep(type) {
   if (type === 'branch') return { id: uid('s'), type: 'branch', question: '', options: [
     { id: uid('o'), label: 'はい', steps: [] }, { id: uid('o'), label: 'いいえ', steps: [] }] };
-  return { id: uid('s'), type: 'do', text: '', min: null };
+  if (type === 'section') return { id: uid('s'), type: 'section', title: '' };
+  return { id: uid('s'), type: 'do', text: '', min: null, max: null };
 }
 function renewIds(step) {
   const s = clone(step);
@@ -561,13 +574,15 @@ function exProc() {
   const part = exPart(); exRange();
   const sid = () => uid('s'), oid = () => uid('o');
   p = { id: uid('p'), name: EX.proc, steps: [
-    { id: sid(), type: 'do', text: '時間を計って長文を1題解く', min: 20 },
+    { id: sid(), type: 'section', title: '長文' },
+    { id: sid(), type: 'do', text: '時間を計って長文を1題解く', min: 20, max: 25 },
     { id: sid(), type: 'branch', question: '全問正解だった?', options: [
       { id: oid(), label: 'はい', steps: [{ id: sid(), type: 'do', text: '次の難しさの長文を1題', min: 15 }] },
       { id: oid(), label: 'いいえ', steps: [
         { id: sid(), type: 'do', text: '間違えた設問の理由を書く', min: 10 },
         { id: sid(), type: 'do', text: '該当する段落を音読3回', min: 10 }] }] },
-    { id: sid(), type: 'do', text: '単語帳の {' + EX.range + '} を1周', min: 10 },
+    { id: sid(), type: 'section', title: '単語' },
+    { id: sid(), type: 'do', text: '単語帳の {' + EX.range + '} を1周\n覚えていなかった番号に印を付ける', min: 10, max: 15 },
     { id: sid(), type: 'part', partId: part.id }] };
   S.data.procs.push(p); touch('procs', p.id);
   return p;
@@ -628,7 +643,8 @@ function edList(steps, k, labels) {
       S.data.parts.map(p => `<option value="${esc(p.id)}">${esc(p.name || '名前なし')}</option>`).join('') + `</select>` : '';
   return `<div class="ed-list" data-key="${k}">` + steps.map((s, i) => edStep(s, i, steps.length, labels)).join('') +
     `<div class="addbar"><button type="button" data-act="add" data-type="do" data-key="${k}">＋ やること</button>` +
-    `<button type="button" class="fork" data-act="add" data-type="branch" data-key="${k}">＋ 分かれ道</button>${partSel}</div></div>`;
+    `<button type="button" class="fork" data-act="add" data-type="branch" data-key="${k}">＋ 分かれ道</button>` +
+    `<button type="button" class="secb" data-act="add" data-type="section" data-key="${k}">＋ 区切り</button>${partSel}</div></div>`;
 }
 function edStep(s, i, n, labels) {
   const head = kind => `<div class="st-head"><span class="st-num">${labels[s.id] || ''}</span><span class="st-kind">${kind}</span>${tools(s, i, n)}</div>`;
@@ -642,15 +658,23 @@ function edStep(s, i, n, labels) {
       `<button type="button" class="addopt" data-act="addopt" data-id="${s.id}">＋ 選択肢</button>
       <p class="merge">選んだ道が終わったら、分かれ道の次の手順へ合流します。</p></div>`;
   }
+  if (s.type === 'section') {
+    return `<div class="st sec" id="ed-${s.id}" data-id="${s.id}"><div class="st-head"><span class="st-kind">区切り</span>${tools(s, i, n)}</div>
+      <input type="text" data-f="title" data-id="${s.id}" value="${esc(s.title)}" placeholder="区切りの名前(例:英解釈)" aria-label="区切りの名前">
+      <p class="merge">ここから次の区切りまでが、ひとまとまりになります。</p></div>`;
+  }
   if (s.type === 'part') {
     const pt = getItem('parts', s.partId);
     return `<div class="st pt" id="ed-${s.id}" data-id="${s.id}">${head('部品')}<div><b>${esc(pt ? pt.name || '名前なし' : '見つからない部品')}</b></div>` +
-      (pt ? `<ol class="pt-sum">${pt.steps.map(x => `<li>${x.type === 'branch' ? '分かれ道:' + esc(x.question) : esc(x.text) || '(空)'}</li>`).join('')}</ol>
+      (pt ? `<ol class="pt-sum">${pt.steps.map(x => x.type === 'section' ? `<li class="pt-sec">${esc(x.title || '区切り')}</li>` : `<li>${x.type === 'branch' ? '分かれ道:' + esc(x.question) : esc(x.text) || '(空)'}</li>`).join('')}</ol>
         <button type="button" class="linkbtn" data-act="openpart" data-id="${esc(pt.id)}">部品の中身を直す</button>` : '') + `</div>`;
   }
   return `<div class="st do" id="ed-${s.id}" data-id="${s.id}">${head('やること')}
-    <textarea data-f="text" data-id="${s.id}" rows="1" placeholder="やること(例:時間を計って解く)  範囲は {単語帳} のように書く" aria-label="やること">${esc(s.text)}</textarea>
-    <label class="min">時間 <input type="number" inputmode="decimal" min="0" step="1" data-f="min" data-id="${s.id}" value="${s.min == null ? '' : s.min}"> 分</label></div>`;
+    <textarea data-f="text" data-id="${s.id}" rows="1" placeholder="やること(例:時間を計って解く)。改行できます。範囲は {単語帳} のように書く" aria-label="やること">${esc(s.text)}</textarea>
+    <div class="min">時間
+      <input type="number" inputmode="decimal" min="0" step="1" data-f="min" data-id="${s.id}" value="${s.min == null ? '' : s.min}" aria-label="時間(短いとき)">〜
+      <input type="number" inputmode="decimal" min="0" step="1" data-f="max" data-id="${s.id}" value="${s.max == null ? '' : s.max}" aria-label="時間(長いとき)"> 分
+      <span class="min-hint">短いとき〜長いとき。片方だけでもよい</span></div></div>`;
 }
 function autosize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
 
@@ -678,7 +702,11 @@ function renderPreview() {
     (p.steps.length ? pvList(p.steps, C.numbering(p.steps, S.data), '') : `<p class="pv-hint">右(スマホでは下)で手順を足すと、ここに出ます。</p>`);
 }
 function pvList(steps, labels, inner) {
-  return `<ol class="pv-list${inner ? ' inner ' + inner : ''}">` + steps.map(s => pvStep(s, labels)).join('') + `</ol>`;
+  return `<ol class="pv-list${inner ? ' inner ' + inner : ''}">` + steps.map((s, i) => s.type === 'section' ? pvSection(steps, i) : pvStep(s, labels)).join('') + `</ol>`;
+}
+function pvSection(steps, i) {
+  const s = steps[i], t = C.fmtSpan(C.sectionSpan(steps, i, S.data));
+  return `<li class="pv-sec" data-pv="jump" data-id="${s.id}"><span class="pv-sec-t">${s.title ? esc(s.title) : '<span class="pv-blank">(区切りの名前なし)</span>'}</span>${t ? `<span class="pv-sec-m">${t}</span>` : ''}</li>`;
 }
 function pvStep(s, labels) {
   const num = `<span class="pv-num">${labels[s.id] || ''}</span>`;
@@ -699,7 +727,7 @@ function pvStep(s, labels) {
   const done = !!S.checks[s.id];
   return `<li class="pv-step do${done ? ' done' : ''}" data-id="${s.id}">
     <button type="button" class="pv-check" data-pv="check" data-id="${s.id}" aria-pressed="${done}" aria-label="済みの印"></button>
-    <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-text">${s.text ? richText(s.text) : '<span class="pv-blank">(まだ書いていません)</span>'}</span>${s.min ? `<span class="pv-min">${C.fmtMin(+s.min)}</span>` : ''}</div></li>`;
+    <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-text">${s.text ? richText(s.text) : '<span class="pv-blank">(まだ書いていません)</span>'}</span>${C.fmtStep(s) ? `<span class="pv-min">${C.fmtStep(s)}</span>` : ''}</div></li>`;
 }
 let pvTimer = null;
 function previewSoon(fn) { clearTimeout(pvTimer); pvTimer = setTimeout(fn, 120); }
@@ -1031,7 +1059,7 @@ document.addEventListener('input', e => {
     else if (f === 'label') { const r = locateOpt(p, t.dataset.opt); if (!r) return; r.option.label = t.value; }
     else {
       const l = locate(p, t.dataset.id); if (!l) return;
-      if (f === 'min') { const v = t.value.trim(); l.step.min = v === '' || isNaN(+v) ? null : Math.max(0, +v); }
+      if (f === 'min' || f === 'max') { const v = t.value.trim(); l.step[f] = v === '' || isNaN(+v) ? null : Math.max(0, +v); }
       else l.step[f] = t.value;
     }
     if (t.tagName === 'TEXTAREA') autosize(t);
@@ -1224,7 +1252,7 @@ SE.init([
   ['[data-act="example"], [data-act="cy-example"]', 'levelup'],
   ['#saveBtn', 'send'],
   ['[data-pv="check"]', el => el.getAttribute('aria-pressed') === 'true' ? 'down' : 'done'],
-  ['[data-pv="pick"], [data-act="add"][data-type="do"], [data-act="cy-add"], [data-act="rule-add"], [data-act="addopt"], [data-act="dup"], [data-act="dupitem"]', 'pluck'],
+  ['[data-pv="pick"], [data-act="add"][data-type="do"], [data-act="add"][data-type="section"], [data-act="cy-add"], [data-act="rule-add"], [data-act="addopt"], [data-act="dup"], [data-act="dupitem"]', 'pluck'],
   ['[data-act="add"][data-type="branch"], [data-act="ln-add"], [data-act="rg-set"]', 'link'],
   ['[data-act="del"], [data-act="delopt"], [data-act="delitem"], [data-act="cy-rm"], [data-act="rule-rm"], [data-act="cy-del"], [data-act="rg-del"]', 'remove'],
   ['[data-act="newitem"], [data-act="rg-new"], [data-act="cy-new-for"], [data-act="open"], [data-act="cy-open"], [data-act="rg-open"], [data-act="openpart"], #cGo', 'open'],

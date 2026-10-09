@@ -100,7 +100,7 @@ const test = (name, fn) => tests.push([name, fn]);
 
 test('版が出て、データが無いときは最初の保存で作ると出る', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  assert.match($(dom, '#ver').textContent, /今開いている版:3/);
+  assert.match($(dom, '#ver').textContent, /今開いている版:4/);
   assert.match(status(dom), /最初に保存したときに作ります/);
   assert.match($(dom, '.empty').textContent, /手順書がまだありません/);
   assert.strictEqual($(dom, '#bar').hidden, true);
@@ -133,7 +133,7 @@ test('見本:選ぶ前は先が出ず、選ぶとその道だけが出る。合�
   const pvNums = () => $$(dom, '#pv .pv-num').map(e => e.textContent);
   assert.deepStrictEqual(pvNums(), ['1', '2', '3']);
   assert.match($(dom, '#pv').textContent, /選ぶと、その先の手順が出ます/);
-  assert.match($(dom, '#pv .pvTotal').textContent, /合計 20分〜35分/);
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 20〜35分/);
   click(dom, $(dom, `#pv [data-pv="pick"][data-opt="${no}"]`));
   assert.deepStrictEqual(pvNums(), ['1', '2', '2-b', '2-c', '3']);
   assert.match($(dom, '#pv .pvTotal').textContent, /選んだ道では 20分/);
@@ -296,6 +296,7 @@ test('計算:合計時間の幅と、壊れたデータの手当て', async () =
   const { span, fmtSpan, normalize } = dom.window.TJ.C;
   const steps = [{ type: 'do', min: 30 }, { type: 'branch', options: [{ steps: [{ type: 'do', min: 45 }] }, { steps: [] }] }];
   assert.strictEqual(fmtSpan(span(steps)), '30分〜1時間15分');
+  assert.strictEqual(fmtSpan({ lo: 10, hi: 15 }), '10〜15分');
   const d = normalize({ procs: [{ name: 'x', steps: [{ text: 'a', min: '5' }, { type: 'branch', options: [{}] }] }], links: [] });
   assert.strictEqual(d.procs[0].steps[0].type, 'do');
   assert.strictEqual(d.procs[0].steps[0].min, 5);
@@ -406,7 +407,7 @@ test('部品:作って手順書に差し込むと見本で展開され、時間�
   const partId = $(dom, '[data-sel="addpart"] option:nth-child(2)').value;
   change(dom, $(dom, '[data-sel="addpart"][data-key="root"]'), partId);
   assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3', '4', '4-a', '4-b']);
-  assert.match($(dom, '#pv .pvTotal').textContent, /合計 23分〜38分/);
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 23〜38分/);
   assert.match($(dom, '#ed .st.pt').textContent, /Ankiに追加/);
   // 部品を直すと手順書にも出る
   click(dom, $(dom, '#ed [data-act="openpart"]'));
@@ -559,7 +560,9 @@ test('例:手順書の例を入れると、範囲と部品の例も一緒に入�
   assert.strictEqual($(dom, '.edhead .name').value, '例:長文の日');
   assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3', '4', '4-a', '4-b']);
   assert.strictEqual($(dom, '#pv .rng').textContent, '例の単語帳 401〜500番');
-  assert.match($(dom, '#pv .pvTotal').textContent, /合計 50分〜55分/);
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec-t').map(e => e.textContent), ['長文', '単語']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec-m').map(e => e.textContent), ['35〜45分', '15〜20分']);
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 50分〜1時間5分/);
   click(dom, $$(dom, '#pv [data-pv="pick"]')[1]);
   assert.match($(dom, '#pv').textContent, /間違えた設問の理由を書く/);
   // もう一度押しても増えない
@@ -570,7 +573,8 @@ test('例:手順書の例を入れると、範囲と部品の例も一緒に入�
   click(dom, $(dom, '#saveBtn')); await settle(dom);
   const d = gh.json(DATA);
   assert.deepStrictEqual([d.procs.length, d.parts.length, d.ranges.length], [1, 1, 1]);
-  assert.strictEqual(d.procs[0].steps[3].partId, d.parts[0].id);
+  assert.strictEqual(d.procs[0].steps.find(x => x.type === 'part').partId, d.parts[0].id);
+  assert.deepStrictEqual(d.procs[0].steps.filter(x => x.type === 'section').map(x => x.title), ['長文', '単語']);
 });
 
 test('例:範囲・部品のタブだけで入れることもでき、サイクルは空のときだけ例を入れられる', async () => {
@@ -606,6 +610,83 @@ test('効果音:行軍表と同じ仕組みで、入/切と音量は接続の欄
   // 切にすると覚える(行軍表・省・思案と同じ鍵)
   click(dom, $(dom, '#se-on'));
   assert.strictEqual(dom.window.localStorage.getItem('se-on'), '0');
+});
+
+
+/* ---------- 版4:区切り・時間の幅・見やすさ ---------- */
+test('区切り:足して名前を付けると、見本で次の区切りまでがまとまり、その時間も出る。番号は続き番号のまま', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  click(dom, $(dom, '[data-act="newitem"]'));
+  type(dom, $(dom, '.edhead .name'), '英語の日');
+  // 区切り「英解釈」→ やること → やること → 区切り「英文法」→ やること
+  click(dom, lastAdd(dom, 'root', 'section'));          // 1つ目のやることの後ろに足される
+  click(dom, $$(dom, '#ed .st.sec [data-act="up"]')[0]); // 一番上へ
+  type(dom, $(dom, '#ed .st.sec input[data-f="title"]'), '英解釈');
+  type(dom, $$(dom, '#ed textarea')[0], '構文を取る');
+  type(dom, $$(dom, '#ed input[data-f="min"]')[0], '10');
+  type(dom, $$(dom, '#ed input[data-f="max"]')[0], '15');
+  click(dom, lastAdd(dom, 'root', 'do'));
+  type(dom, $$(dom, '#ed textarea')[1], '訳を書く');
+  type(dom, $$(dom, '#ed input[data-f="max"]')[1], '20');      // 長いときだけ
+  click(dom, lastAdd(dom, 'root', 'section'));
+  type(dom, $$(dom, '#ed .st.sec input[data-f="title"]')[1], '英文法');
+  click(dom, lastAdd(dom, 'root', 'do'));
+  type(dom, $$(dom, '#ed textarea')[2], '問題集を2ページ');
+  type(dom, $$(dom, '#ed input[data-f="min"]')[2], '30');
+  await wait(dom, 200);
+  assert.deepStrictEqual($$(dom, '#ed .st-num').map(e => e.textContent).filter(Boolean), ['1', '2', '3']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec-t').map(e => e.textContent), ['英解釈', '英文法']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec-m').map(e => e.textContent), ['30〜35分', '30分']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-min').map(e => e.textContent), ['10〜15分', '20分', '30分']);
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 1時間〜1時間5分/);
+  // 区切りを押すと、編集のその区切りが光る
+  click(dom, $(dom, '#pv .pv-sec'));
+  assert($(dom, '#ed .st.sec').classList.contains('flash'));
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const st = gh.json(DATA).procs[0].steps;
+  assert.deepStrictEqual(st.map(x => x.type), ['section', 'do', 'do', 'section', 'do']);
+  assert.deepStrictEqual([st[0].title, st[1].min, st[1].max, st[2].min, st[2].max], ['英解釈', 10, 15, null, 20]);
+});
+
+test('区切りは分かれ道の中や部品の中にも置ける', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  const { yes } = await buildExample(dom);
+  click(dom, lastAdd(dom, yes, 'section'));
+  type(dom, $(dom, `.opt[data-opt="${yes}"] .st.sec input`), '発展');
+  click(dom, $(dom, `#pv [data-pv="pick"][data-opt="${yes}"]`));
+  await wait(dom, 200);
+  assert.strictEqual($(dom, '#pv .pv-list.inner .pv-sec-t').textContent, '発展');
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '2-a', '3']);
+  // 部品の中の区切りは、手順書の部品の欄にも見出しで出る
+  tabTo(dom, 'parts'); click(dom, $(dom, '[data-act="newitem"]'));
+  type(dom, $(dom, '.edhead .name'), '復習');
+  click(dom, lastAdd(dom, 'root', 'section')); type(dom, $(dom, '#ed .st.sec input'), '確認');
+  const partId = dom.window.TJ.S.open.parts;
+  tabTo(dom, 'procs');
+  change(dom, $(dom, '[data-sel="addpart"][data-key="root"]'), partId);
+  assert.strictEqual($(dom, '#ed .st.pt .pt-sec').textContent, '確認');
+});
+
+test('やることの文の改行は、見本でもそのまま出る', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  click(dom, $(dom, '[data-act="newitem"]'));
+  type(dom, $(dom, '#ed textarea'), '1行目\n2行目');
+  await wait(dom, 200);
+  assert.strictEqual($(dom, '#pv .pv-text').textContent, '1行目\n2行目');
+  const ws = dom.window.getComputedStyle($(dom, '#pv .pv-text')).whiteSpace;
+  assert.strictEqual(ws, 'pre-wrap');
+});
+
+test('計算:時間の幅と区切りの時間', async () => {
+  const st = [{ id: 'a', type: 'section', title: 'x' }, { id: 'b', type: 'do', min: 15, max: 10 }, { id: 'c', type: 'do', max: 5 },
+              { id: 'd', type: 'section', title: 'y' }, { id: 'e', type: 'do' }];
+  assert.deepStrictEqual(Core.stepTime(st[1]), { lo: 10, hi: 15 });     // 逆に書いても直す
+  assert.strictEqual(Core.fmtStep(st[2]), '5分');
+  assert.strictEqual(Core.fmtStep(st[4]), '');
+  assert.strictEqual(Core.fmtSpan(Core.sectionSpan(st, 0)), '15〜20分');
+  assert.strictEqual(Core.fmtSpan(Core.sectionSpan(st, 3)), '');
+  assert.deepStrictEqual(Core.numbering(st), { b: '1', c: '2', e: '3' });
 });
 
 (async () => {
