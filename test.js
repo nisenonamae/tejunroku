@@ -1,11 +1,16 @@
 // 手順録のテスト:node test.js
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
+const { JSDOM, ResourceLoader } = require('jsdom');
 const assert = require('assert');
 
 const HTML = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const DATA = 'roadmap/apps/tejunroku/data.json';
+const CORE = fs.readFileSync(path.join(__dirname, 'core.js'));
+const Core = require('./core.js');
+class Loader extends ResourceLoader {
+  fetch(url, opts) { return url.endsWith('/core.js') ? Promise.resolve(CORE) : null; }
+}
 
 /* GitHub のにせもの */
 function makeGH() {
@@ -24,6 +29,8 @@ function makeGH() {
     if (!opts.method || opts.method === 'GET') {
       gh.gets++;
       const f = files[p];
+      const inDir = Object.keys(files).filter(k => k.startsWith(p + '/'));
+      if (!f && inDir.length) return res(200, inDir.map(k => ({ name: k.slice(p.length + 1), path: k, type: 'file' })));
       const r = f ? res(200, { content: Buffer.from(f.text, 'utf8').toString('base64').replace(/(.{60})/g, '$1\n'), sha: f.sha }) : res(404, {});
       if (gh.onGet) gh.onGet(gh.gets);
       return r;
@@ -40,16 +47,17 @@ function makeGH() {
   return gh;
 }
 
-async function open(gh, storage) {
+async function open(gh, storage, noConn) {
   const dom = new JSDOM(HTML, {
-    url: 'https://nisenonamae.github.io/tejunroku/', runScripts: 'dangerously', pretendToBeVisual: true,
+    url: 'https://nisenonamae.github.io/tejunroku/', runScripts: 'dangerously', pretendToBeVisual: true, resources: new Loader(),
     beforeParse(w) {
       w.fetch = gh.fetch; w.confirm = () => true; w.scrollTo = () => {};
       w.Element.prototype.scrollIntoView = function () {};
-      w.localStorage.setItem('tejunroku.conn', JSON.stringify({ repo: 'me/notion-daily', token: 'tok' }));
+      if (!noConn) w.localStorage.setItem('tejunroku.conn', JSON.stringify({ repo: 'me/notion-daily', token: 'tok' }));
       for (const [k, v] of Object.entries(storage || {})) w.localStorage.setItem(k, v);
     }
   });
+  await new Promise(r => dom.window.addEventListener('load', r));
   await settle(dom);
   return dom;
 }
@@ -65,7 +73,7 @@ const optIds = (dom, branchIndex = 0) => $$(dom, '.st.br')[branchIndex].querySel
 
 // 仕様書の例「長文の日」を画面の操作で作る
 async function buildExample(dom) {
-  click(dom, $(dom, '[data-act="newproc"]'));
+  click(dom, $(dom, '[data-act="newitem"]'));
   type(dom, $(dom, '.edhead .name'), '長文の日');
   const ta = () => $$(dom, '#ed textarea[data-f="text"]');
   type(dom, ta()[0], '時間を計って解く');
@@ -92,7 +100,7 @@ const test = (name, fn) => tests.push([name, fn]);
 
 test('版が出て、データが無いときは最初の保存で作ると出る', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  assert.match($(dom, '#ver').textContent, /今開いている版:1/);
+  assert.match($(dom, '#ver').textContent, /今開いている版:2/);
   assert.match(status(dom), /最初に保存したときに作ります/);
   assert.match($(dom, '.empty').textContent, /手順書がまだありません/);
   assert.strictEqual($(dom, '#bar').hidden, true);
@@ -100,9 +108,7 @@ test('版が出て、データが無いときは最初の保存で作ると出�
 
 test('つないでいないと接続の欄が開く', async () => {
   const gh = makeGH();
-  const dom = new JSDOM(HTML, { url: 'https://nisenonamae.github.io/tejunroku/', runScripts: 'dangerously',
-    beforeParse(w) { w.fetch = gh.fetch; w.scrollTo = () => {}; } });
-  await settle(dom);
+  const dom = await open(gh, {}, true);
   assert.strictEqual($(dom, '#conn').hidden, false);
   assert.match(status(dom), /まだつないでいません/);
   assert.strictEqual($(dom, '#cRepo').value, 'nisenonamae/notion-daily');
@@ -127,10 +133,10 @@ test('見本:選ぶ前は先が出ず、選ぶとその道だけが出る。合�
   const pvNums = () => $$(dom, '#pv .pv-num').map(e => e.textContent);
   assert.deepStrictEqual(pvNums(), ['1', '2', '3']);
   assert.match($(dom, '#pv').textContent, /選ぶと、その先の手順が出ます/);
-  assert.match($(dom, '#pvTotal').textContent, /合計 20分〜35分/);
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 20分〜35分/);
   click(dom, $(dom, `#pv [data-pv="pick"][data-opt="${no}"]`));
   assert.deepStrictEqual(pvNums(), ['1', '2', '2-b', '2-c', '3']);
-  assert.match($(dom, '#pvTotal').textContent, /選んだ道では 20分/);
+  assert.match($(dom, '#pv .pvTotal').textContent, /選んだ道では 20分/);
   // もう一度押すと選ぶ前に戻る
   click(dom, $(dom, `#pv [data-pv="pick"][data-opt="${no}"]`));
   assert.deepStrictEqual(pvNums(), ['1', '2', '3']);
@@ -140,6 +146,7 @@ test('見本:{範囲の名前} は範囲の印になり、文の中の記号は�
   const gh = makeGH(); const dom = await open(gh);
   await buildExample(dom);
   assert.strictEqual($(dom, '#pv .rng').textContent, '単語帳');
+  assert($(dom, '#pv .rng').classList.contains('missing'));
   type(dom, $$(dom, '#ed textarea')[0], '<b>太字</b>にしない');
   await wait(dom, 200);
   assert.strictEqual($$(dom, '#pv .pv-text b').length, 0);
@@ -271,22 +278,22 @@ test('手順書の複製と、消して保存', async () => {
   gh.set(DATA, { version: 1, procs: [{ id: 'p_a', name: '数学の日', steps: [{ id: 's1', type: 'do', text: '例題', min: 10 }] }], ranges: [], parts: [], cycles: [], links: { t1: 'p_a' } });
   const dom = await open(gh);
   click(dom, $(dom, '[data-act="open"]'));
-  click(dom, $(dom, '[data-act="dupproc"]'));
+  click(dom, $(dom, '[data-act="dupitem"]'));
   assert.strictEqual($(dom, '.edhead .name').value, '数学の日のコピー');
   click(dom, $(dom, '[data-act="back"]'));
   click(dom, $$(dom, '[data-act="open"]')[0]);
-  click(dom, $(dom, '[data-act="delproc"]'));
+  click(dom, $(dom, '[data-act="delitem"]'));
   click(dom, $(dom, '#saveBtn'));
   await settle(dom);
   const d = gh.json(DATA);
   assert.deepStrictEqual(d.procs.map(p => p.name), ['数学の日のコピー']);
   assert.notStrictEqual(d.procs[0].steps[0].id, 's1');
-  assert.deepStrictEqual(d.links, { t1: 'p_a' }); // 他の欄は触らない
+  assert.deepStrictEqual(d.links, {}); // 消した手順書への結びつきは外れる
 });
 
 test('計算:合計時間の幅と、壊れたデータの手当て', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  const { span, fmtSpan, normalize } = dom.window.TJ;
+  const { span, fmtSpan, normalize } = dom.window.TJ.C;
   const steps = [{ type: 'do', min: 30 }, { type: 'branch', options: [{ steps: [{ type: 'do', min: 45 }] }, { steps: [] }] }];
   assert.strictEqual(fmtSpan(span(steps)), '30分〜1時間15分');
   const d = normalize({ procs: [{ name: 'x', steps: [{ text: 'a', min: '5' }, { type: 'branch', options: [{}] }] }], links: [] });
@@ -294,6 +301,214 @@ test('計算:合計時間の幅と、壊れたデータの手当て', async () =
   assert.strictEqual(d.procs[0].steps[0].min, 5);
   assert(d.procs[0].steps[1].options[0].id);
   assert.strictEqual(JSON.stringify(d.links), '{}'); // 画面側の物なので文字で比べる
+});
+
+/* ---------- 段階2 ---------- */
+const change = (dom, el, v) => { assert(el, '選ぶものが見つからない'); el.value = v; el.dispatchEvent(new dom.window.Event('change', { bubbles: true })); };
+const tabTo = (dom, t) => click(dom, $(dom, `[data-tab="${t}"]`));
+const empty = () => ({ version: 1, procs: [], ranges: [], parts: [], cycles: [], links: {} });
+const TODAY = Core.taskDay();
+function withTasks(gh) {
+  gh.set('roadmap/tasks/defs.json', { version: 1, tasks: [
+    { id: 't1', name: '英語長文', ministries: ['英語'] },
+    { id: 't2', name: 'Anki英単語', ministries: ['英語'], cycle: { items: ['過去の語彙', '未来の語彙', '長文'], anchorDate: '2026-09-30', anchorIndex: 1 } }] });
+  gh.set('roadmap/tasks/overlay.json', { version: 1, tasks: { t1: { edits: { name: '英語の長文' } } },
+    newTasks: [{ id: 't3', name: '数学演習', ministries: ['数学'] }] });
+}
+
+test('範囲:作って区切り方を決めると、見本と手順の中に今日の範囲が出る', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  await buildExample(dom);
+  tabTo(dom, 'ranges');
+  click(dom, $(dom, '[data-act="rg-new"]'));
+  type(dom, $(dom, '[data-rf="name"]'), '単語帳');
+  change(dom, $(dom, '[data-rf="name"]'), '単語帳');
+  type(dom, $(dom, '[data-rf="unit"]'), '語');
+  type(dom, $(dom, '[data-rf="start"]'), '1');
+  type(dom, $(dom, '[data-rf="end"]'), '2000');
+  type(dom, $(dom, '[data-rf="step"]'), '100');
+  await wait(dom, 200);
+  assert.strictEqual($(dom, '#pv .big').textContent, '1〜100語');
+  assert.match($(dom, '#pv').textContent, /あと20回/);
+  assert.match($(dom, '.box').parentNode.textContent, /長文の日/); // 使っている手順
+  // 位置を直す
+  $(dom, '#rgPos').value = '401';
+  click(dom, $(dom, '[data-act="rg-set"]'));
+  assert.strictEqual($(dom, '#pv .big').textContent, '401〜500語');
+  // 手順書の見本に出る
+  tabTo(dom, 'procs'); // 開いていた手順書のまま戻る
+  assert.strictEqual($(dom, '#pv .rng').textContent, '単語帳 401〜500語');
+  assert(!$(dom, '#pv .rng').classList.contains('missing'));
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const r = gh.json(DATA).ranges[0];
+  assert.strictEqual(r.name, '単語帳'); assert.strictEqual(r.step, 100); assert.strictEqual(r.set.pos, 401);
+  assert.strictEqual(r.created, TODAY);
+});
+
+test('範囲:行軍表の記録で進めた分が足される(位置を直す前の記録・古い月は数えない)', async () => {
+  const gh = makeGH();
+  const d = empty();
+  d.ranges.push({ id: 'r1', name: '単語帳', unit: '語', start: 1, end: 300, step: 100, atEnd: 'stop', created: '2026-09-01', set: null });
+  d.ranges.push({ id: 'r2', name: '過去問', unit: '年', start: 2000, end: 2020, step: 1, atEnd: 'stop', created: '2026-09-01', set: { pos: 2010, at: '2026-10-05T00:00:00.000Z' } });
+  gh.set(DATA, d);
+  gh.set('roadmap/apps/tejunroku/runs/2026-08.json', { '2026-08-30': { t: { advanced: ['r1'], at: '2026-08-30T10:00:00Z' } } });
+  gh.set('roadmap/apps/tejunroku/runs/2026-10.json', {
+    '2026-10-01': { t: { advanced: ['r1', 'r2'], at: '2026-10-01T10:00:00Z' } },
+    '2026-10-06': { t: { advanced: ['r1', 'r2'], at: '2026-10-06T10:00:00Z' }, u: { advanced: ['r2'], at: '2026-10-06T11:00:00Z' } } });
+  const dom = await open(gh);
+  tabTo(dom, 'ranges');
+  const cards = $$(dom, '.pcard').map(e => e.textContent);
+  assert.match(cards[0], /今日:201〜300語/);
+  assert.match(cards[1], /今日:2012年/);
+  click(dom, $$(dom, '[data-act="rg-open"]')[1]);
+  assert.match($(dom, '#pv').textContent, /進めた回数:2回\(位置を直したあと\)/);
+});
+
+test('範囲の計算:終わりまで来たら止まる/最初に戻る', async () => {
+  const runs = { '2026-10': { '2026-10-01': { a: { advanced: ['r'], at: '2026-10-01T01:00:00Z' } }, '2026-10-02': { a: { advanced: ['r'], at: '2026-10-02T01:00:00Z' } }, '2026-10-03': { a: { advanced: ['r'], at: '2026-10-03T01:00:00Z' } } } };
+  const r = { id: 'r', unit: '題', start: 1, end: 25, step: 10, atEnd: 'stop', set: null };
+  let st = Core.rangeState(r, runs);
+  assert.strictEqual(Core.rangeText(r, st), '最後まで終わりました');
+  r.atEnd = 'loop'; st = Core.rangeState(r, runs);
+  assert.strictEqual(Core.rangeText(r, st), '6〜15題'); assert.strictEqual(st.laps, 1);
+  r.end = 30; r.atEnd = 'stop'; st = Core.rangeState(r, { '2026-10': { '2026-10-01': runs['2026-10']['2026-10-01'], '2026-10-02': runs['2026-10']['2026-10-02'] } });
+  assert.strictEqual(Core.rangeText(r, st), '21〜30題'); assert.strictEqual(st.left, 1);
+});
+
+test('範囲の名前を変えると、手順の中の {名前} も書き換えられる', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  await buildExample(dom);
+  tabTo(dom, 'ranges');
+  click(dom, $(dom, '[data-act="rg-new"]'));
+  const n = $(dom, '[data-rf="name"]');
+  type(dom, n, '単語帳'); change(dom, n, '単語帳');
+  const n2 = $(dom, '[data-rf="name"]');
+  assert.strictEqual(n2.dataset.old, '単語帳');
+  type(dom, n2, '英単語帳'); change(dom, n2, '英単語帳');
+  tabTo(dom, 'procs'); // 開いていた手順書のまま戻る
+  const t = $$(dom, '#ed textarea[data-f="text"]');
+  assert.strictEqual(t[t.length - 1].value, '知らなかった単語をAnkiへ({英単語帳})');
+  assert.strictEqual($(dom, '#pv .rng').textContent, '英単語帳 1〜10');
+});
+
+test('部品:作って手順書に差し込むと見本で展開され、時間も足される。消すと外れる', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  await buildExample(dom);
+  tabTo(dom, 'parts');
+  click(dom, $(dom, '[data-act="newitem"]'));
+  type(dom, $(dom, '.edhead .name'), 'Ankiに追加');
+  type(dom, $(dom, '#ed textarea'), 'カードを作る');
+  type(dom, $(dom, '#ed input[data-f="min"]'), '3');
+  click(dom, lastAdd(dom, 'root', 'do'));
+  type(dom, $$(dom, '#ed textarea')[1], '音声を付ける');
+  assert.strictEqual($(dom, '[data-sel="addpart"]'), null); // 部品の中に部品は入れない
+  tabTo(dom, 'procs'); // 開いていた手順書のまま戻る
+  const partId = $(dom, '[data-sel="addpart"] option:nth-child(2)').value;
+  change(dom, $(dom, '[data-sel="addpart"][data-key="root"]'), partId);
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3', '4', '4-a', '4-b']);
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 23分〜38分/);
+  assert.match($(dom, '#ed .st.pt').textContent, /Ankiに追加/);
+  // 部品を直すと手順書にも出る
+  click(dom, $(dom, '#ed [data-act="openpart"]'));
+  assert.strictEqual($(dom, '.edhead .name').value, 'Ankiに追加');
+  assert.match($(dom, '.info').textContent, /長文の日/);
+  // 消すと手順書から外れる
+  click(dom, $(dom, '[data-act="delitem"]'));
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const d = gh.json(DATA);
+  assert.strictEqual(d.parts.length, 0);
+  assert.deepStrictEqual(d.procs[0].steps.map(s => s.type), ['do', 'branch', 'do']);
+});
+
+test('サイクル:タスクの定義(取り込み・アプリで足したもの・名前の変更)から選んで作る', async () => {
+  const gh = makeGH(); withTasks(gh); const dom = await open(gh);
+  await buildExample(dom);
+  const pid = dom.window.TJ.S.data.procs[0].id;
+  tabTo(dom, 'cycles');
+  const groups = $$(dom, '#cyTask optgroup').map(g => g.label + ':' + [...g.querySelectorAll('option')].map(o => o.textContent).join(','));
+  assert.deepStrictEqual(groups, ['英語:英語の長文,Anki英単語', '数学:数学演習']);
+  $(dom, '#cyTask').value = 't1';
+  click(dom, $(dom, '[data-act="cy-new"]'));
+  assert.match($(dom, '.edhead h2').textContent, /英語の長文のサイクル/);
+  for (const n of ['過去の語彙', '未来の語彙', '長文']) {
+    click(dom, $(dom, '[data-act="cy-add"]'));
+    type(dom, $$(dom, '[data-cf="iname"]').pop(), n);
+  }
+  change(dom, $$(dom, '[data-cf="iproc"]')[2], pid);
+  click(dom, $(dom, '[data-act="rule-add"]')); type(dom, $$(dom, '[data-cf="rule"]')[0], '未実行が3日以上続いたとき');
+  click(dom, $(dom, '[data-act="rule-add"]')); type(dom, $$(dom, '[data-cf="rule"]')[1], '試験前の週');
+  await wait(dom, 200);
+  assert.deepStrictEqual($$(dom, '#pv .ring button').map(b => b.textContent), ['過去の語彙', '未来の語彙', '長文']);
+  assert.match($(dom, '#pv').textContent, /手順書がありません/);
+  click(dom, $$(dom, '#pv .ring button')[2]);
+  assert.match($(dom, '#pv .sub-title, #pv .sh-title').textContent, /「長文」の日:長文の日/);
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3']);
+  // 始まりは作った日だけ選べる。中身の並べ替えでも始まりの中身はついていく
+  change(dom, $(dom, '[data-cf="start"]'), '1');
+  click(dom, $$(dom, '[data-act="cy-up"]')[1]); // 未来の語彙 を一番上へ
+  assert.strictEqual($(dom, '[data-cf="start"]').selectedOptions[0].textContent, '未来の語彙');
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const c = gh.json(DATA).cycles[0];
+  assert.strictEqual(c.taskId, 't1');
+  assert.deepStrictEqual(c.items.map(i => [i.name, i.procId]), [['未来の語彙', null], ['過去の語彙', null], ['長文', pid]]);
+  assert.deepStrictEqual(c.rules, ['未実行が3日以上続いたとき', '試験前の週']);
+  assert.strictEqual(c.anchorDate, TODAY); assert.strictEqual(c.anchorIndex, 0);
+  // 作ったタスクは「作る」の選択肢から消える
+  click(dom, $(dom, '[data-act="back"]'));
+  assert(!$$(dom, '#cyTask option').some(o => o.value === 't1'));
+});
+
+test('サイクル:行軍表で作ったサイクルの中身を写せる(始まりもそのまま)', async () => {
+  const gh = makeGH(); withTasks(gh); const dom = await open(gh);
+  tabTo(dom, 'cycles');
+  $(dom, '#cyTask').value = 't2'; click(dom, $(dom, '[data-act="cy-new"]'));
+  assert.match($(dom, '#ed').textContent, /行軍表で作ったサイクルがあります\(過去の語彙 → 未来の語彙 → 長文\)/);
+  click(dom, $(dom, '[data-act="cy-copyold"]'));
+  assert.deepStrictEqual($$(dom, '[data-cf="iname"]').map(i => i.value), ['過去の語彙', '未来の語彙', '長文']);
+  assert.strictEqual($(dom, '[data-cf="start"]'), null);
+  assert.match($(dom, '#ed').textContent, /9月30日に「未来の語彙」から始まりました/);
+});
+
+test('結びつき:タスクに手順書を結びつけ、手順書を消すと結びつきとサイクルの中身からも外れる', async () => {
+  const gh = makeGH(); withTasks(gh); const dom = await open(gh);
+  await buildExample(dom);
+  const pid = dom.window.TJ.S.data.procs[0].id;
+  tabTo(dom, 'links');
+  assert.match($(dom, '.empty').textContent, /まだ結びつきがありません/);
+  change(dom, $(dom, '[data-sel="lnadd"]'), 't3');
+  change(dom, $(dom, '[data-sel="link"][data-tid="t3"]'), pid);
+  assert.match($(dom, '.lrow').textContent, /数学演習/);
+  // サイクルも作って中身に結びつける
+  click(dom, $(dom, '.lrow [data-act="cy-new-for"]'));
+  click(dom, $(dom, '[data-act="cy-add"]')); type(dom, $(dom, '[data-cf="iname"]'), '例題');
+  change(dom, $(dom, '[data-cf="iproc"]'), pid);
+  tabTo(dom, 'procs');
+  assert.match($(dom, '.info').textContent, /数学演習、数学演習の「例題」/);
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  assert.strictEqual(gh.json(DATA).links.t3, pid);
+  // 消す
+  click(dom, $(dom, '[data-act="delitem"]'));
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const d = gh.json(DATA);
+  assert.deepStrictEqual(d.links, {});
+  assert.strictEqual(d.cycles[0].items[0].procId, null);
+  tabTo(dom, 'links');
+  assert.match($(dom, '.lrow').textContent, /サイクル:例題\(手順書あり 0\/1\)/);
+});
+
+test('版1の下書きを読み込める', async () => {
+  const gh = makeGH();
+  const cache = { data: { procs: [{ id: 'p_x', name: '版1の下書き', steps: [{ id: 's', type: 'do', text: 'a' }] }] }, sha: null, dirty: ['p_x'], removed: [] };
+  const dom = await open(gh, { 'tejunroku.cache': JSON.stringify(cache) });
+  assert.strictEqual($(dom, '#bar').hidden, false);
+  assert.match($(dom, '.pcard').textContent, /版1の下書き/);
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  assert.strictEqual(gh.json(DATA).procs[0].name, '版1の下書き');
+});
+
+test('1日の区切りは日本時間の朝5時', async () => {
+  assert.strictEqual(Core.taskDay(new Date('2026-10-09T19:59:00Z')), '2026-10-09'); // 10日 4:59
+  assert.strictEqual(Core.taskDay(new Date('2026-10-09T20:00:00Z')), '2026-10-10'); // 10日 5:00
 });
 
 (async () => {

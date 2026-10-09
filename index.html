@@ -117,7 +117,7 @@ main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
 .st-kind{font-size:.8125rem;color:var(--sub)}
 .st.br > .st-head .st-kind{color:var(--fork);font-weight:700}
 .tools{margin-left:auto;display:flex;gap:4px}
-.tools button{border:1px solid var(--line);background:#fff;border-radius:4px;min-width:34px;height:30px;padding:0 6px;font-size:.8125rem;color:var(--sub)}
+.tools button{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:4px;min-width:34px;height:30px;padding:0 6px;font-size:.8125rem;color:var(--sub)}
 .tools button:disabled{opacity:.35;cursor:default}
 .st textarea,.st input[type=text]{width:100%;border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:#fff;resize:vertical}
 .st textarea{min-height:2.6em;line-height:1.5}
@@ -141,6 +141,49 @@ main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
 .bar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0));background:var(--ink);color:#fff;z-index:20}
 .bar[hidden]{display:none}
 .bar .btn.primary{border-color:#fff}
+select{border:1px solid var(--line);border-radius:4px;padding:5px 6px;background:#fff;max-width:100%}
+.info{font-size:.875rem;color:var(--sub);margin:-4px 0 12px}
+.box{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin:0 0 12px}
+.box h3{margin:0 0 8px;font-size:1rem}
+.note{font-size:.8125rem;color:var(--sub);margin:0 0 8px}
+.irow{display:grid;grid-template-columns:2em minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:center;margin:0 0 6px}
+@media (max-width:520px){.irow{grid-template-columns:2em minmax(0,1fr) auto;margin-bottom:10px}.irow .tools{grid-column:3;grid-row:1}.irow select{grid-column:2 / 4;grid-row:2}}
+.irow input,.rrow input[type=text]{border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;background:#fff}
+.rrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 6px}
+.rrow > input[type=text]{flex:1 1 200px;width:auto}
+.rrow label{font-size:.875rem;color:var(--sub)}
+.rrow input[type=number]{width:7em;border:1px solid var(--line);border-radius:4px;padding:5px 6px}
+.add2{border:1px dashed var(--sub);background:transparent;border-radius:4px;padding:4px 10px;font-size:.875rem}
+.small{border:1px solid var(--line);background:#fff;border-radius:4px;padding:3px 8px;font-size:.8125rem;color:var(--sub)}
+.ring{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px}
+.ring button{border:1.5px solid var(--ink);background:#fff;border-radius:4px;padding:2px 10px}
+.ring button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.ring .arw{color:var(--sub)}
+.ring .loop{font-size:.8125rem;color:var(--sub)}
+.sub-title{font-weight:700;margin:4px 0 8px;font-size:.9375rem}
+.pv-step.pt > .pv-mark{position:absolute;left:-23px;top:7px;width:14px;height:14px;background:var(--accent)}
+.pv-list.inner.part::before{background:var(--accent)}
+.pv-list.inner.part > .pv-step > .pv-check{border-color:var(--accent)}
+.pt-sum{margin:4px 0 6px;padding-left:1.4em;font-size:.875rem;color:var(--sub)}
+.addbar select{border:1px dashed var(--accent);color:var(--accent);background:transparent;font-size:.875rem;padding:4px 6px}
+.rng.missing{border-color:var(--warn);color:var(--warn)}
+.big{font-size:1.75rem;font-weight:700;line-height:1.3;margin:4px 0}
+.meter{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin:8px 0 6px}
+.meter i{display:block;height:100%;background:var(--accent)}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+.fields label{font-size:.8125rem;color:var(--sub);display:block}
+.fields input,.fields select{display:block;width:100%;margin-top:2px;border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-size:1rem;color:var(--ink);background:#fff}
+.warnline{color:var(--warn);font-size:.875rem;margin:6px 0 0}
+.warnline:empty{display:none}
+.lrow{background:var(--sheet);border:1px solid var(--line);border-left:4px solid var(--ink);border-radius:4px;padding:10px 12px;margin:0 0 8px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:8px 14px;align-items:center}
+@media (max-width:760px){.lrow{grid-template-columns:1fr}}
+.lrow .lt b{display:block}
+.lrow .lt span,.lrow .lc span{font-size:.8125rem;color:var(--sub)}
+.lrow label{font-size:.8125rem;color:var(--sub)}
+.lrow select{display:block;width:100%;margin-top:2px;font-size:.9375rem;color:var(--ink)}
+.linkbtn{border:0;background:none;color:var(--accent);text-decoration:underline;padding:0;font-size:.875rem}
+.edhead h2{margin:0;font-size:1.25rem;flex:1 1 200px}
+.pcard .meter{margin:6px 0 0}
 </style>
 </head>
 <body>
@@ -167,50 +210,21 @@ main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
   <button class="btn primary" id="saveBtn" type="button">保存する</button>
 </div>
 
+<script src="core.js"></script>
 <script>
 'use strict';
-const APP_VERSION = 1;
-const DATA_PATH = 'roadmap/apps/tejunroku/data.json';
-const LS_CONN = 'tejunroku.conn';
-const LS_CACHE = 'tejunroku.cache';
+const APP_VERSION = 2;
+const C = window.TJCore;
+const BASE = 'roadmap/apps/tejunroku';
+const DATA_PATH = BASE + '/data.json', RUNS_DIR = BASE + '/runs';
+const DEFS_PATH = 'roadmap/tasks/defs.json', OVERLAY_PATH = 'roadmap/tasks/overlay.json';
+const LS_CONN = 'tejunroku.conn', LS_CACHE = 'tejunroku.cache';
 const DEFAULT_REPO = 'nisenonamae/notion-daily';
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const uid = p => p + '_' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
-const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
-
-/* ---------- データの形 ---------- */
-function emptyData() { return { version: 1, procs: [], ranges: [], parts: [], cycles: [], links: {} }; }
-function normSteps(steps) {
-  if (!Array.isArray(steps)) return [];
-  return steps.filter(s => s && typeof s === 'object').map(s => {
-    s.id = s.id || uid('s');
-    if (s.type === 'branch') {
-      s.question = s.question || '';
-      s.options = (Array.isArray(s.options) ? s.options : []).map(o => {
-        o = o && typeof o === 'object' ? o : {};
-        o.id = o.id || uid('o'); o.label = o.label || ''; o.steps = normSteps(o.steps);
-        return o;
-      });
-    } else if (s.type === 'part') {
-      s.partId = s.partId || '';
-    } else {
-      s.type = 'do'; s.text = s.text || '';
-      s.min = (s.min === '' || s.min == null || isNaN(+s.min)) ? null : +s.min;
-    }
-    return s;
-  });
-}
-function normalize(d) {
-  d = d && typeof d === 'object' ? d : {};
-  const e = emptyData();
-  for (const k of Object.keys(e)) if (d[k] == null || typeof d[k] !== typeof e[k] || Array.isArray(d[k]) !== Array.isArray(e[k])) d[k] = e[k];
-  d.procs = d.procs.filter(p => p && typeof p === 'object').map(p => {
-    p.id = p.id || uid('p'); p.name = p.name || ''; p.steps = normSteps(p.steps); return p;
-  });
-  return d;
-}
+const uid = C.uid, clone = C.clone;
+const md = d => d ? (+d.slice(5, 7)) + '月' + (+d.slice(8, 10)) + '日' : '';
 
 /* ---------- 文字と base64 ---------- */
 const b64enc = s => btoa(unescape(encodeURIComponent(s)));
@@ -230,31 +244,33 @@ function errMsg(e) {
   return 'GitHubにつながりませんでした。電波を確かめて、もう一度試してください。';
 }
 const gh = {
-  url(path) {
-    const c = getConn();
-    return 'https://api.github.com/repos/' + c.repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
-  },
+  repoOk: false,
+  api(path) { const c = getConn(); return 'https://api.github.com/repos/' + c.repo + (path ? '/contents/' + path.split('/').map(encodeURIComponent).join('/') : ''); },
   headers() { return { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + getConn().token }; },
   check() { const c = getConn(); if (!c.repo || !c.token) throw httpErr('noconn'); },
-  async read(path) {
+  async get(path) {
     this.check();
-    const r = await fetch(this.url(path), { headers: this.headers(), cache: 'no-store' });
+    const r = await fetch(this.api(path), { headers: this.headers(), cache: 'no-store' });
     if (r.status === 404) {
       // ファイルが無いのか、リポジトリが無いのかを見分ける
-      const c = getConn();
-      const rr = await fetch('https://api.github.com/repos/' + c.repo, { headers: this.headers(), cache: 'no-store' });
-      if (!rr.ok) throw httpErr(rr.status);
-      return { json: null, sha: null };
+      if (!this.repoOk) { const rr = await fetch(this.api(''), { headers: this.headers(), cache: 'no-store' }); if (!rr.ok) throw httpErr(rr.status); this.repoOk = true; }
+      return null;
     }
     if (!r.ok) throw httpErr(r.status);
-    const j = await r.json();
+    this.repoOk = true;
+    return r.json();
+  },
+  async read(path) {
+    const j = await this.get(path);
+    if (!j) return { json: null, sha: null };
     return { json: JSON.parse(b64dec(j.content || '') || 'null'), sha: j.sha };
   },
+  async list(dir) { const j = await this.get(dir); return Array.isArray(j) ? j : []; },
   async write(path, obj, sha, message) {
     this.check();
     const body = { message, content: b64enc(JSON.stringify(obj, null, 2) + '\n') };
     if (sha) body.sha = sha;
-    const r = await fetch(this.url(path), { method: 'PUT', headers: Object.assign(this.headers(), { 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+    const r = await fetch(this.api(path), { method: 'PUT', headers: Object.assign(this.headers(), { 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
     if (!r.ok) throw httpErr(r.status);
     const j = await r.json();
     return j.content && j.content.sha;
@@ -265,36 +281,23 @@ async function commit(mutate, message) {
   let last;
   for (let i = 0; i < 3; i++) {
     const { json, sha } = await gh.read(DATA_PATH);
-    const data = normalize(json);
+    const data = C.normalize(json);
     mutate(data);
-    try {
-      const newSha = await gh.write(DATA_PATH, data, sha, message);
-      return { data, sha: newSha };
-    } catch (e) {
-      last = e;
-      if (e.status === 409 || e.status === 422) continue;
-      throw e;
-    }
+    try { return { data, sha: await gh.write(DATA_PATH, data, sha, message) }; }
+    catch (e) { last = e; if (e.status === 409 || e.status === 422) continue; throw e; }
   }
   throw last;
 }
 
 /* ---------- 手順の木の操作 ---------- */
-function walk(steps, fn) {
-  for (let i = 0; i < steps.length; i++) {
-    const s = steps[i];
-    if (fn(s, steps, i) === false) return false;
-    if (s.type === 'branch') for (const o of s.options) if (walk(o.steps, fn) === false) return false;
-  }
-}
 function locate(proc, id) {
   let r = null;
-  walk(proc.steps, (s, list, index) => { if (s.id === id) { r = { step: s, list, index }; return false; } });
+  C.walk(proc.steps, (s, list, index) => { if (s.id === id) { r = { step: s, list, index }; return false; } });
   return r;
 }
 function locateOpt(proc, optId) {
   let r = null;
-  walk(proc.steps, s => {
+  C.walk(proc.steps, s => {
     if (s.type === 'branch') {
       const index = s.options.findIndex(o => o.id === optId);
       if (index >= 0) { r = { branch: s, option: s.options[index], index }; return false; }
@@ -302,11 +305,7 @@ function locateOpt(proc, optId) {
   });
   return r;
 }
-function listByKey(proc, key) {
-  if (key === 'root') return proc.steps;
-  const r = locateOpt(proc, key);
-  return r ? r.option.steps : null;
-}
+function listByKey(proc, key) { if (key === 'root') return proc.steps; const r = locateOpt(proc, key); return r ? r.option.steps : null; }
 function newStep(type) {
   if (type === 'branch') return { id: uid('s'), type: 'branch', question: '', options: [
     { id: uid('o'), label: 'はい', steps: [] }, { id: uid('o'), label: 'いいえ', steps: [] }] };
@@ -314,14 +313,18 @@ function newStep(type) {
 }
 function renewIds(step) {
   const s = clone(step);
-  (function re(x) {
-    x.id = uid('s');
-    if (x.type === 'branch') for (const o of x.options) { o.id = uid('o'); o.steps.forEach(re); }
-  })(s);
+  (function re(x) { x.id = uid('s'); if (x.type === 'branch') for (const o of x.options) { o.id = uid('o'); o.steps.forEach(re); } })(s);
   return s;
+}
+function removeWhere(steps, pred) {
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (pred(steps[i])) steps.splice(i, 1);
+    else if (steps[i].type === 'branch') steps[i].options.forEach(o => removeWhere(o.steps, pred));
+  }
 }
 const ops = {
   add(proc, key, type) { const list = listByKey(proc, key); if (!list) return null; const s = newStep(type); list.push(s); return s; },
+  addPart(proc, key, partId) { const list = listByKey(proc, key); if (!list) return null; const s = { id: uid('s'), type: 'part', partId }; list.push(s); return s; },
   move(proc, id, dir) {
     const l = locate(proc, id); if (!l) return false;
     const j = l.index + dir; if (j < 0 || j >= l.list.length) return false;
@@ -339,96 +342,99 @@ const ops = {
   }
 };
 
-/* ---------- 番号と時間 ---------- */
-function letter(c) { const a = 'abcdefghijklmnopqrstuvwxyz'; return c < 26 ? a[c] : String(c + 1); }
-// 1, 2, 2-a, 2-b(分かれ道の中は選択肢をまたいで続き番号), さらに中は 2-b-1…
-function numbering(steps) {
-  const map = {};
-  const sub = (br, L, depth) => {
-    let c = 0;
-    for (const o of br.options) for (const s of o.steps) {
-      const L2 = L + '-' + (depth % 2 === 1 ? letter(c) : String(c + 1));
-      c++; map[s.id] = L2;
-      if (s.type === 'branch') sub(s, L2, depth + 1);
-    }
-  };
-  steps.forEach((s, i) => { const L = String(i + 1); map[s.id] = L; if (s.type === 'branch') sub(s, L, 1); });
-  return map;
-}
-// 合計時間の幅(分かれ道は一番短い道〜一番長い道)。pick を渡すと選んだ道で数える
-function span(steps, data, pick, seen) {
-  seen = seen || new Set();
-  let lo = 0, hi = 0;
-  for (const s of steps) {
-    if (s.type === 'do') { const m = +s.min || 0; lo += m; hi += m; }
-    else if (s.type === 'branch') {
-      const chosen = pick && s.options.find(o => o.id === pick[s.id]);
-      const opts = chosen ? [chosen] : s.options;
-      if (opts.length) {
-        const rs = opts.map(o => span(o.steps, data, pick, seen));
-        lo += Math.min(...rs.map(r => r.lo)); hi += Math.max(...rs.map(r => r.hi));
-      }
-    } else if (s.type === 'part') {
-      const p = data && (data.parts || []).find(x => x.id === s.partId);
-      if (p && !seen.has(p.id)) { const r = span(p.steps || [], data, pick, new Set([...seen, p.id])); lo += r.lo; hi += r.hi; }
-    }
-  }
-  return { lo, hi };
-}
-function fmtMin(m) {
-  m = Math.round(m * 10) / 10;
-  if (m >= 60) { const h = Math.floor(m / 60), r = Math.round((m - h * 60) * 10) / 10; return h + '時間' + (r ? r + '分' : ''); }
-  return m + '分';
-}
-function fmtSpan(r) { if (!r.hi) return ''; return r.lo === r.hi ? fmtMin(r.lo) : fmtMin(r.lo) + '〜' + fmtMin(r.hi); }
-function countDo(steps) { let n = 0; walk(steps, s => { if (s.type === 'do') n++; }); return n; }
-function allPicked(steps, pick) {
-  let ok = true;
-  const rec = list => { for (const s of list) if (s.type === 'branch') {
-    const o = s.options.find(o => o.id === pick[s.id]); if (!o) { ok = false; return; } rec(o.steps); } };
-  rec(steps); return ok;
-}
-
 /* ---------- 状態 ---------- */
-const S = { data: emptyData(), sha: null, dirty: new Set(), removed: new Set(),
-  tab: 'procs', procId: null, pick: {}, checks: {}, saving: false, connOpen: false };
-const cur = () => S.data.procs.find(p => p.id === S.procId) || null;
-const getProc = id => S.data.procs.find(p => p.id === id) || null;
-function putProc(d, id, p) {
-  const i = d.procs.findIndex(x => x.id === id);
-  if (!p) { if (i >= 0) d.procs.splice(i, 1); return; }
-  if (i >= 0) d.procs[i] = clone(p); else d.procs.push(clone(p));
+const S = { data: C.emptyData(), sha: null, dirty: new Set(), removed: new Set(),
+  tab: 'procs', open: { procs: null, parts: null, cycles: null, ranges: null },
+  pick: {}, checks: {}, cyPick: 0, saving: false, connOpen: false,
+  tasks: [], tasksMsg: '', runs: {}, runsState: '', linkRows: new Set() };
+const COLLS = ['procs', 'parts', 'ranges', 'cycles', 'links'];
+const key = (c, id) => c + ':' + id;
+const splitKey = k => { const i = k.indexOf(':'); return [k.slice(0, i), k.slice(i + 1)]; };
+function getItem(c, id) { if (c === 'links') return S.data.links[id]; return (S.data[c] || []).find(x => x.id === id) || null; }
+function putItem(d, c, id, item) {
+  if (c === 'links') { if (item == null) delete d.links[id]; else d.links[id] = item; return; }
+  const a = d[c], i = a.findIndex(x => x.id === id);
+  if (item == null) { if (i >= 0) a.splice(i, 1); return; }
+  if (i >= 0) a[i] = clone(item); else a.push(clone(item));
 }
 function applyLocal(d) {
-  for (const id of S.dirty) putProc(d, id, getProc(id));
-  for (const id of S.removed) putProc(d, id, null);
+  for (const k of S.dirty) { const [c, id] = splitKey(k); putItem(d, c, id, getItem(c, id)); }
+  for (const k of S.removed) { const [c, id] = splitKey(k); putItem(d, c, id, null); }
 }
 let cacheTimer = null;
 function saveCache() {
   clearTimeout(cacheTimer); cacheTimer = null;
-  try { localStorage.setItem(LS_CACHE, JSON.stringify({ data: S.data, sha: S.sha, dirty: [...S.dirty], removed: [...S.removed] })); } catch (e) {}
+  try { localStorage.setItem(LS_CACHE, JSON.stringify({ data: S.data, sha: S.sha, dirty: [...S.dirty], removed: [...S.removed], tasks: S.tasks })); } catch (e) {}
 }
 function saveCacheSoon() { clearTimeout(cacheTimer); cacheTimer = setTimeout(saveCache, 400); }
 function loadCache() {
   try {
     const c = JSON.parse(localStorage.getItem(LS_CACHE)); if (!c) return;
-    S.data = normalize(c.data); S.sha = c.sha || null;
-    S.dirty = new Set(c.dirty || []); S.removed = new Set(c.removed || []);
+    const fix = k => k.includes(':') ? k : 'procs:' + k; // 版1の下書きは手順書だけだった
+    S.data = C.normalize(c.data); S.sha = c.sha || null;
+    S.dirty = new Set((c.dirty || []).map(fix)); S.removed = new Set((c.removed || []).map(fix));
+    S.tasks = Array.isArray(c.tasks) ? c.tasks : [];
   } catch (e) {}
 }
-function touch(id) { S.removed.delete(id); S.dirty.add(id); saveCacheSoon(); renderBar(); }
+function touch(c, id) { const k = key(c, id); S.removed.delete(k); S.dirty.add(k); saveCacheSoon(); renderBar(); }
+function drop(c, id) { const k = key(c, id); S.dirty.delete(k); S.removed.add(k); saveCacheSoon(); renderBar(); }
 function changeCount() { return S.dirty.size + S.removed.size; }
-
+const isDirty = (c, id) => S.dirty.has(key(c, id));
 function setStatus(msg, err) { const el = $('#status'); el.textContent = msg || ''; el.classList.toggle('err', !!err); }
 
+/* ---------- 引くための関数 ---------- */
+const findTask = tid => S.tasks.find(x => x.id === tid) || null;
+function taskName(tid) { const t = findTask(tid); return t ? t.name : '見つからないタスク'; }
+const cycleOf = tid => S.data.cycles.find(c => c.taskId === tid) || null;
+const rangeByName = n => S.data.ranges.find(r => r.name === n) || null;
+function procUses(pid) {
+  const out = [];
+  for (const [tid, p] of Object.entries(S.data.links)) if (p === pid) out.push(taskName(tid));
+  for (const c of S.data.cycles) for (const it of c.items) if (it.procId === pid) out.push(taskName(c.taskId) + 'の「' + (it.name || '名前なし') + '」');
+  return out;
+}
+function partUses(partId) {
+  return S.data.procs.filter(p => { let f = false; C.walk(p.steps, s => { if (s.type === 'part' && s.partId === partId) { f = true; return false; } }); return f; });
+}
+const textOf = s => s.type === 'do' ? s.text : s.type === 'branch' ? s.question : '';
+function rangeUses(name) {
+  const out = [];
+  for (const coll of ['procs', 'parts']) for (const p of S.data[coll]) {
+    let n = 0; C.walk(p.steps, s => { n += C.rangeNamesIn(textOf(s)).filter(x => x === name).length; });
+    if (n) out.push({ coll, p, n });
+  }
+  return out;
+}
+const rState = r => C.rangeState(r, S.runs);
+const rPct = (st) => st.finished ? 100 : Math.round(st.done / st.total * 100);
+
 /* ---------- 読み込みと保存 ---------- */
+async function loadTasks() {
+  try {
+    const [a, b] = await Promise.all([gh.read(DEFS_PATH), gh.read(OVERLAY_PATH)]);
+    S.tasks = C.taskList(a.json, b.json);
+    S.tasksMsg = S.tasks.length ? '' : 'タスクの定義がまだありません。行軍表でタスクを取り込むと、ここで選べます。';
+  } catch (e) { S.tasksMsg = 'タスクの定義を読めませんでした。' + errMsg(e); }
+}
+async function loadRuns() {
+  const since = C.rangeSinceMonth(S.data.ranges);
+  if (since === null) { S.runs = {}; S.runsState = 'ok'; return; }
+  try {
+    const files = await gh.list(RUNS_DIR);
+    const ms = files.map(f => f.name).filter(n => /^\d{4}-\d{2}\.json$/.test(n)).map(n => n.slice(0, 7)).filter(m => !since || m >= since);
+    const res = await Promise.all(ms.map(m => gh.read(RUNS_DIR + '/' + m + '.json')));
+    const runs = {}; ms.forEach((m, i) => { runs[m] = res[i].json || {}; });
+    S.runs = runs; S.runsState = 'ok';
+  } catch (e) { S.runsState = 'err'; }
+}
 async function load() {
   setStatus('読み込み中…');
   try {
     const { json, sha } = await gh.read(DATA_PATH);
-    const d = normalize(json);
+    const d = C.normalize(json);
     applyLocal(d);
     S.data = d; S.sha = sha;
+    await Promise.all([loadTasks(), loadRuns()]);
     setStatus(json ? '読み込みました。' : 'まだデータがありません。最初に保存したときに作ります。');
   } catch (e) { setStatus(errMsg(e), true); if (e.status === 'noconn' || e.status === 401 || e.status === 404) S.connOpen = true; }
   saveCache(); render();
@@ -436,22 +442,22 @@ async function load() {
 async function save() {
   if (!changeCount() || S.saving) return;
   S.saving = true; renderBar(); setStatus('保存中…');
-  const snap = new Map([...S.dirty].map(id => [id, clone(getProc(id))]));
+  const snap = new Map([...S.dirty].map(k => { const [c, id] = splitKey(k); return [k, clone(getItem(c, id))]; }));
   const rem = new Set(S.removed);
-  const names = [...snap.values()].filter(Boolean).map(p => p.name || '名前なし').slice(0, 3).join('・');
+  const n = snap.size + rem.size;
   try {
     const { data, sha } = await commit(d => {
-      for (const [id, p] of snap) putProc(d, id, p);
-      for (const id of rem) putProc(d, id, null);
-    }, '手順録: ' + (names || '手順書を消す'));
+      for (const [k, item] of snap) { const [c, id] = splitKey(k); putItem(d, c, id, item); }
+      for (const k of rem) { const [c, id] = splitKey(k); putItem(d, c, id, null); }
+    }, '手順録: ' + n + '件の変更');
     // 保存中に直したものは残す
-    for (const id of [...S.dirty]) {
-      const now = getProc(id);
-      if (snap.has(id) && JSON.stringify(now) === JSON.stringify(snap.get(id))) S.dirty.delete(id);
-      else putProc(data, id, now);
+    for (const k of [...S.dirty]) {
+      const [c, id] = splitKey(k), now = getItem(c, id);
+      if (snap.has(k) && JSON.stringify(now) === JSON.stringify(snap.get(k))) S.dirty.delete(k);
+      else putItem(data, c, id, now);
     }
-    for (const id of rem) S.removed.delete(id);
-    for (const id of S.removed) putProc(data, id, null);
+    for (const k of rem) S.removed.delete(k);
+    for (const k of S.removed) { const [c, id] = splitKey(k); putItem(data, c, id, null); }
     S.data = data; S.sha = sha;
     setStatus('保存しました。');
   } catch (e) { setStatus(errMsg(e), true); if (e.status === 'noconn' || e.status === 401) S.connOpen = true; }
@@ -462,11 +468,13 @@ async function save() {
 const TABS = [['procs', '手順書'], ['cycles', 'サイクル'], ['ranges', '範囲'], ['parts', '部品'], ['links', '結びつき']];
 function render() {
   $('#tabs').innerHTML = TABS.map(([k, n]) => `<button type="button" data-tab="${k}"${S.tab === k ? ' aria-current="page"' : ''}>${n}</button>`).join('');
-  const conn = $('#conn'); conn.hidden = !S.connOpen;
+  $('#conn').hidden = !S.connOpen;
   $('#ver').textContent = '今開いている版:' + APP_VERSION;
-  const v = $('#view');
-  if (S.tab === 'procs') { if (cur()) renderEditor(v); else { S.procId = null; renderList(v); } }
-  else v.innerHTML = `<div class="later"><p style="margin:0">「${esc(TABS.find(t => t[0] === S.tab)[1])}」のタブは、次の段階で作ります。</p></div>`;
+  const v = $('#view'), id = S.open[S.tab];
+  if (S.tab === 'procs' || S.tab === 'parts') { if (id && getItem(S.tab, id)) renderEditor(v); else { S.open[S.tab] = null; renderList(v); } }
+  else if (S.tab === 'cycles') { if (id && getItem('cycles', id)) renderCycle(v); else { S.open.cycles = null; renderCycles(v); } }
+  else if (S.tab === 'ranges') { if (id && getItem('ranges', id)) renderRange(v); else { S.open.ranges = null; renderRanges(v); } }
+  else renderLinks(v);
   renderBar();
 }
 function renderBar() {
@@ -475,26 +483,46 @@ function renderBar() {
   $('#barText').textContent = S.saving ? '保存中…' : '保存していない変更:' + n + '件';
   $('#saveBtn').disabled = S.saving;
 }
-function renderList(v) {
-  const ps = S.data.procs;
-  v.innerHTML = `<div class="listhead"><h2>手順書</h2><button class="btn primary" type="button" data-act="newproc">新しい手順書を作る</button></div>` +
-    (ps.length ? `<div class="plist">` + ps.map(p => {
-      const sp = fmtSpan(span(p.steps, S.data));
-      return `<button type="button" class="pcard" data-act="open" data-pid="${esc(p.id)}"><b>${esc(p.name || '名前なし')}</b>` +
-        `<span>やること ${countDo(p.steps)}つ${sp ? '・' + sp : ''}</span>` +
-        (S.dirty.has(p.id) ? ` <span class="unsaved">未保存</span>` : '') + `</button>`;
-    }).join('') + `</div>`
-      : `<p class="empty">手順書がまだありません。「新しい手順書を作る」から始めます。</p>`);
+const unsaved = (c, id) => isDirty(c, id) ? ` <span class="unsaved">未保存</span>` : '';
+function countDo(steps) { let n = 0; C.walk(steps, s => { if (s.type === 'do') n++; }); return n; }
+function procOptions(sel, none) {
+  return `<option value="">${none}</option>` + S.data.procs.map(p => `<option value="${esc(p.id)}"${p.id === sel ? ' selected' : ''}>${esc(p.name || '名前なし')}</option>`).join('');
+}
+function taskSelect(tasks, attrs) {
+  const g = {};
+  tasks.forEach(t => (g[t.ministry || '省なし'] = g[t.ministry || '省なし'] || []).push(t));
+  return `<select ${attrs}><option value="">タスクを選ぶ</option>` + Object.entries(g).map(([m, ts]) =>
+    `<optgroup label="${esc(m)}">` + ts.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('') + `</optgroup>`).join('') + `</select>`;
 }
 
+/* 手順書・部品の一覧 */
+function renderList(v) {
+  const c = S.tab, items = S.data[c], isPart = c === 'parts';
+  v.innerHTML = `<div class="listhead"><h2>${isPart ? '部品' : '手順書'}</h2><button class="btn primary" type="button" data-act="newitem">${isPart ? '新しい部品を作る' : '新しい手順書を作る'}</button></div>` +
+    (isPart ? `<p class="info">「Ankiに追加」「音読3回」のような、いろいろな手順書で使う手順をまとめておく棚です。部品を直すと、使っているすべての手順書に反映されます。</p>` : '') +
+    (items.length ? `<div class="plist">` + items.map(p => {
+      const sp = C.fmtSpan(C.span(p.steps, S.data));
+      const sub = isPart ? `使っている手順書 ${partUses(p.id).length}つ` : (procUses(p.id).join('、') || 'まだどのタスクにも結びついていません');
+      return `<button type="button" class="pcard" data-act="open" data-id="${esc(p.id)}"><b>${esc(p.name || '名前なし')}</b>` +
+        `<span>やること ${countDo(p.steps)}つ${sp ? '・' + sp : ''}</span><br><span>${esc(sub)}</span>${unsaved(c, p.id)}</button>`;
+    }).join('') + `</div>`
+      : `<p class="empty">${isPart ? '部品がまだありません。「新しい部品を作る」から始めます。' : '手順書がまだありません。「新しい手順書を作る」から始めます。'}</p>`);
+}
+
+/* 手順書・部品の編集 */
+const cur = () => (S.tab === 'procs' || S.tab === 'parts') ? getItem(S.tab, S.open[S.tab]) : null;
 function renderEditor(v) {
-  const p = cur();
+  const p = cur(), isPart = S.tab === 'parts';
+  let info;
+  if (isPart) { const u = partUses(p.id); info = u.length ? '使っている手順書:' + u.map(x => x.name || '名前なし').join('、') : 'まだどの手順書にも差し込まれていません。'; }
+  else { const u = procUses(p.id); info = u.length ? '結びついているタスク:' + u.join('、') : 'まだどのタスクにも結びついていません(結びつきのタブで決めます)。'; }
   v.innerHTML = `<div class="edhead">
       <button class="btn quiet" type="button" data-act="back">一覧へ</button>
-      <input class="name" type="text" data-f="name" value="${esc(p.name)}" placeholder="手順書の名前(例:長文の日)" aria-label="手順書の名前">
-      <button class="btn quiet" type="button" data-act="dupproc">複製</button>
-      <button class="btn danger" type="button" data-act="delproc">消す</button>
+      <input class="name" type="text" data-f="name" value="${esc(p.name)}" placeholder="${isPart ? '部品の名前(例:Ankiに追加)' : '手順書の名前(例:長文の日)'}" aria-label="名前">
+      <button class="btn quiet" type="button" data-act="dupitem">複製</button>
+      <button class="btn danger" type="button" data-act="delitem">消す</button>
     </div>
+    <p class="info">${esc(info)}</p>
     <div class="grid">
       <div class="pvwrap"><div class="sheet" id="pv"></div></div>
       <div id="ed"></div>
@@ -503,9 +531,8 @@ function renderEditor(v) {
 }
 function renderSteps() {
   const p = cur(); if (!p) return;
-  const labels = numbering(p.steps);
   const ed = $('#ed');
-  ed.innerHTML = edList(p.steps, 'root', labels);
+  ed.innerHTML = edList(p.steps, 'root', C.numbering(p.steps, S.data));
   ed.querySelectorAll('textarea').forEach(autosize);
   renderPreview();
 }
@@ -516,10 +543,13 @@ function tools(s, i, n) {
     <button type="button" data-act="dup" data-id="${s.id}">複製</button>
     <button type="button" data-act="del" data-id="${s.id}">消す</button></span>`;
 }
-function edList(steps, key, labels) {
-  return `<div class="ed-list" data-key="${key}">` + steps.map((s, i) => edStep(s, i, steps.length, labels)).join('') +
-    `<div class="addbar"><button type="button" data-act="add" data-type="do" data-key="${key}">＋ やること</button>` +
-    `<button type="button" class="fork" data-act="add" data-type="branch" data-key="${key}">＋ 分かれ道</button></div></div>`;
+function edList(steps, k, labels) {
+  const partSel = S.tab === 'procs' && S.data.parts.length
+    ? `<select data-sel="addpart" data-key="${k}" aria-label="部品を差し込む"><option value="">＋ 部品…</option>` +
+      S.data.parts.map(p => `<option value="${esc(p.id)}">${esc(p.name || '名前なし')}</option>`).join('') + `</select>` : '';
+  return `<div class="ed-list" data-key="${k}">` + steps.map((s, i) => edStep(s, i, steps.length, labels)).join('') +
+    `<div class="addbar"><button type="button" data-act="add" data-type="do" data-key="${k}">＋ やること</button>` +
+    `<button type="button" class="fork" data-act="add" data-type="branch" data-key="${k}">＋ 分かれ道</button>${partSel}</div></div>`;
 }
 function edStep(s, i, n, labels) {
   const head = kind => `<div class="st-head"><span class="st-num">${labels[s.id] || ''}</span><span class="st-kind">${kind}</span>${tools(s, i, n)}</div>`;
@@ -534,32 +564,42 @@ function edStep(s, i, n, labels) {
       <p class="merge">選んだ道が終わったら、分かれ道の次の手順へ合流します。</p></div>`;
   }
   if (s.type === 'part') {
-    const pt = S.data.parts.find(x => x.id === s.partId);
-    return `<div class="st pt" id="ed-${s.id}" data-id="${s.id}">${head('部品')}<div>${esc(pt ? pt.name : '見つからない部品')}</div></div>`;
+    const pt = getItem('parts', s.partId);
+    return `<div class="st pt" id="ed-${s.id}" data-id="${s.id}">${head('部品')}<div><b>${esc(pt ? pt.name || '名前なし' : '見つからない部品')}</b></div>` +
+      (pt ? `<ol class="pt-sum">${pt.steps.map(x => `<li>${x.type === 'branch' ? '分かれ道:' + esc(x.question) : esc(x.text) || '(空)'}</li>`).join('')}</ol>
+        <button type="button" class="linkbtn" data-act="openpart" data-id="${esc(pt.id)}">部品の中身を直す</button>` : '') + `</div>`;
   }
   return `<div class="st do" id="ed-${s.id}" data-id="${s.id}">${head('やること')}
-    <textarea data-f="text" data-id="${s.id}" rows="1" placeholder="やること(例:時間を計って解く)" aria-label="やること">${esc(s.text)}</textarea>
+    <textarea data-f="text" data-id="${s.id}" rows="1" placeholder="やること(例:時間を計って解く)  範囲は {単語帳} のように書く" aria-label="やること">${esc(s.text)}</textarea>
     <label class="min">時間 <input type="number" inputmode="decimal" min="0" step="1" data-f="min" data-id="${s.id}" value="${s.min == null ? '' : s.min}"> 分</label></div>`;
 }
 function autosize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
 
 /* 見本 */
+function rangeChip(name) {
+  const r = rangeByName(name);
+  if (!r) return `<span class="rng missing" title="この名前の範囲がありません(範囲のタブで作ります)">${esc(name)}</span>`;
+  return `<span class="rng" title="範囲「${esc(name)}」の今日の分">${esc(name)} ${esc(C.rangeText(r, rState(r)))}</span>`;
+}
 function richText(t) {
-  return esc(t).replace(/\{([^{}]+)\}/g, (m, name) => `<span class="rng" title="範囲:実行するときは今日の範囲に置き換わります">${name}</span>`);
+  t = String(t); let out = '', last = 0;
+  t.replace(C.RANGE_RE, (m, name, idx) => { out += esc(t.slice(last, idx)) + rangeChip(name); last = idx + m.length; return m; });
+  return out + esc(t.slice(last));
+}
+function previewHead(title, steps) {
+  const whole = C.fmtSpan(C.span(steps, S.data));
+  let chosen = '';
+  if (C.hasBranch(steps, S.data) && C.allPicked(steps, S.pick, S.data)) { const c = C.fmtSpan(C.span(steps, S.data, S.pick)); chosen = c ? '選んだ道では ' + c : ''; }
+  return `<div class="sh-title"><b>${esc(title)}</b><span class="pvTotal">${whole ? '合計 ' + whole : ''}${chosen ? '(' + chosen + ')' : ''}</span></div>`;
 }
 function renderPreview() {
   const p = cur(); const pv = $('#pv'); if (!p || !pv) return;
-  const labels = numbering(p.steps);
-  const whole = fmtSpan(span(p.steps, S.data));
-  const hasBranch = JSON.stringify(p.steps).includes('"branch"');
-  let chosen = '';
-  if (hasBranch && allPicked(p.steps, S.pick)) { const c = fmtSpan(span(p.steps, S.data, S.pick)); chosen = c ? '選んだ道では ' + c : ''; }
-  pv.innerHTML = `<div class="sh-title"><b>${esc(p.name || '名前なし')}</b><span id="pvTotal">${whole ? '合計 ' + whole : ''}${chosen ? '(' + chosen + ')' : ''}</span></div>
-    <p class="sh-note">実行したときの見本です。丸を押すと済みの印、分かれ道は選ぶと先が出ます(どちらも保存はしません)。</p>` +
-    (p.steps.length ? pvList(p.steps, labels, false) : `<p class="pv-hint">右(スマホでは下)で手順を足すと、ここに出ます。</p>`);
+  pv.innerHTML = previewHead(p.name || '名前なし', p.steps) +
+    `<p class="sh-note">実行したときの見本です。丸を押すと済みの印、分かれ道は選ぶと先が出ます(どちらも保存はしません)。</p>` +
+    (p.steps.length ? pvList(p.steps, C.numbering(p.steps, S.data), '') : `<p class="pv-hint">右(スマホでは下)で手順を足すと、ここに出ます。</p>`);
 }
 function pvList(steps, labels, inner) {
-  return `<ol class="pv-list${inner ? ' inner' : ''}">` + steps.map(s => pvStep(s, labels)).join('') + `</ol>`;
+  return `<ol class="pv-list${inner ? ' inner ' + inner : ''}">` + steps.map(s => pvStep(s, labels)).join('') + `</ol>`;
 }
 function pvStep(s, labels) {
   const num = `<span class="pv-num">${labels[s.id] || ''}</span>`;
@@ -568,23 +608,170 @@ function pvStep(s, labels) {
     return `<li class="pv-step br" data-id="${s.id}"><span class="pv-mark"></span>
       <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-q">${s.question ? richText(s.question) : '<span class="pv-blank">(問いを書いていません)</span>'}</span></div>
       <div class="pv-opts">` + s.options.map(x => `<button type="button" data-pv="pick" data-id="${s.id}" data-opt="${x.id}" aria-pressed="${o === x}">${esc(x.label || '名前なし')}</button>`).join('') + `</div>` +
-      (o ? (o.steps.length ? pvList(o.steps, labels, true) : `<p class="pv-hint">この道には手順がありません。そのまま次へ進みます。</p>`)
+      (o ? (o.steps.length ? pvList(o.steps, labels, 'fork') : `<p class="pv-hint">この道には手順がありません。そのまま次へ進みます。</p>`)
          : `<p class="pv-hint">選ぶと、その先の手順が出ます。</p>`) + `</li>`;
   }
   if (s.type === 'part') {
-    const pt = S.data.parts.find(x => x.id === s.partId);
-    return `<li class="pv-step pt" data-id="${s.id}"><div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-text">${esc(pt ? pt.name : '見つからない部品')}</span></div></li>`;
+    const pt = getItem('parts', s.partId), inner = C.expandPart(s, S.data);
+    return `<li class="pv-step pt" data-id="${s.id}"><span class="pv-mark"></span>
+      <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-q">${esc(pt ? pt.name || '名前なし' : '見つからない部品')}</span></div>` +
+      (inner.length ? pvList(inner, labels, 'part') : '') + `</li>`;
   }
   const done = !!S.checks[s.id];
   return `<li class="pv-step do${done ? ' done' : ''}" data-id="${s.id}">
     <button type="button" class="pv-check" data-pv="check" data-id="${s.id}" aria-pressed="${done}" aria-label="済みの印"></button>
-    <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-text">${s.text ? richText(s.text) : '<span class="pv-blank">(まだ書いていません)</span>'}</span>${s.min ? `<span class="pv-min">${fmtMin(+s.min)}</span>` : ''}</div></li>`;
+    <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-text">${s.text ? richText(s.text) : '<span class="pv-blank">(まだ書いていません)</span>'}</span>${s.min ? `<span class="pv-min">${C.fmtMin(+s.min)}</span>` : ''}</div></li>`;
 }
 let pvTimer = null;
-function renderPreviewSoon() { clearTimeout(pvTimer); pvTimer = setTimeout(renderPreview, 120); }
+function previewSoon(fn) { clearTimeout(pvTimer); pvTimer = setTimeout(fn, 120); }
+
+/* サイクル */
+function renderCycles(v) {
+  const free = S.tasks.filter(t => !cycleOf(t.id));
+  v.innerHTML = `<div class="listhead"><h2>サイクル</h2></div>
+    <div class="box"><h3>サイクルを作る</h3>${S.tasksMsg ? `<p class="note">${esc(S.tasksMsg)}</p>` : ''}
+      <div class="rrow">${taskSelect(free, 'id="cyTask" aria-label="サイクルを作るタスク"')}<button class="btn primary" type="button" data-act="cy-new">作る</button></div></div>` +
+    (S.data.cycles.length ? `<div class="plist">` + S.data.cycles.map(c => `<button type="button" class="pcard" data-act="cy-open" data-id="${esc(c.id)}"><b>${esc(taskName(c.taskId))}</b>` +
+      `<span>${esc(c.items.map(i => i.name || '名前なし').join(' → ') || '中身がまだありません')}</span>${unsaved('cycles', c.id)}</button>`).join('') + `</div>`
+      : `<p class="empty">サイクルはまだありません。上でタスクを選んで作ります。</p>`);
+}
+const curCycle = () => getItem('cycles', S.open.cycles);
+function renderCycle(v) {
+  const c = curCycle();
+  v.innerHTML = `<div class="edhead"><button class="btn quiet" type="button" data-act="back">一覧へ</button>
+      <h2>${esc(taskName(c.taskId))}のサイクル</h2><button class="btn danger" type="button" data-act="cy-del">消す</button></div>
+    <div class="grid"><div class="pvwrap"><div class="sheet" id="pv"></div></div><div id="ed"></div></div>`;
+  renderCycleEd();
+}
+function renderCycleEd() {
+  const c = curCycle(), t = findTask(c.taskId), today = C.taskDay();
+  const items = c.items.map((it, i) => `<div class="irow"><span class="st-num">${i + 1}</span>
+      <input type="text" data-cf="iname" data-iid="${it.id}" value="${esc(it.name)}" placeholder="中身の名前(例:過去の語彙)" aria-label="中身の名前">
+      <select data-cf="iproc" data-iid="${it.id}" aria-label="この中身の手順書">${procOptions(it.procId, 'タスクの手順書を使う')}</select>
+      <span class="tools"><button type="button" data-act="cy-up" data-iid="${it.id}" aria-label="上へ"${i === 0 ? ' disabled' : ''}>↑</button>
+      <button type="button" data-act="cy-down" data-iid="${it.id}" aria-label="下へ"${i === c.items.length - 1 ? ' disabled' : ''}>↓</button>
+      <button type="button" data-act="cy-rm" data-iid="${it.id}">消す</button></span></div>`).join('');
+  const old = t && t.oldCycle && !c.items.length
+    ? `<p class="note">行軍表で作ったサイクルがあります(${esc(t.oldCycle.items.join(' → '))})。</p><p><button class="btn" type="button" data-act="cy-copyold">この中身を写す</button></p>` : '';
+  let start;
+  if (!c.items.length) start = `<p class="note">中身を足すと決められます。</p>`;
+  else if (!c.anchorDate || c.anchorDate === today) start = `<div class="rrow"><label>今日(${md(today)})の中身 <select data-cf="start">` +
+      c.items.map((it, i) => `<option value="${i}"${i === c.anchorIndex ? ' selected' : ''}>${esc(it.name || '名前なし')}</option>`).join('') + `</select></label></div>
+      <p class="note">作った日だけ選べます。そのあとの切り替えは、行軍表で下の条件を選んで行います。</p>`;
+  else start = `<p class="note">${md(c.anchorDate)}に「${esc((c.items[c.anchorIndex] || {}).name || '名前なし')}」から始まりました。今どの中身かは行軍表で見られます。</p>`;
+  const rules = c.rules.map((r, i) => `<div class="rrow"><input type="text" data-cf="rule" data-ri="${i}" value="${esc(r)}" placeholder="例:未実行が3日以上続いたとき" aria-label="切り替えてよい条件">
+      <button type="button" class="small" data-act="rule-rm" data-ri="${i}">消す</button></div>`).join('');
+  $('#ed').innerHTML = `<div class="box"><h3>中身(この順に回ります)</h3>${old}${items}
+      <button type="button" class="add2" data-act="cy-add">＋ 中身</button>
+      <p class="note" style="margin-top:8px">「タスクの手順書を使う」にすると、結びつきのタブで決めたそのタスクの手順書が出ます。</p></div>
+    <div class="box"><h3>始まり</h3>${start}</div>
+    <div class="box"><h3>切り替えてよい条件</h3>
+      <p class="note">行軍表で別の中身に切り替えるときに、この中から当てはまるものを選びます。条件が1つも無いと切り替えられません。</p>
+      ${rules}<button type="button" class="add2" data-act="rule-add">＋ 条件</button></div>`;
+  renderCyclePreview();
+}
+function renderCyclePreview() {
+  const c = curCycle(), pv = $('#pv'); if (!c || !pv) return;
+  if (!c.items.length) { pv.innerHTML = `<div class="sh-title"><b>${esc(taskName(c.taskId))}</b></div><p class="pv-hint">中身を足すと、ここに回る順番と、中身ごとの手順が出ます。</p>`; return; }
+  const i = Math.min(S.cyPick, c.items.length - 1), it = c.items[i];
+  const ring = c.items.map((x, j) => `<button type="button" data-pv="cy" data-i="${j}" aria-pressed="${j === i}">${esc(x.name || '名前なし')}</button>`).join('<span class="arw" aria-hidden="true">→</span>') +
+    `<span class="loop">→ 最初に戻る</span>`;
+  const pid = it.procId || S.data.links[c.taskId], p = getItem('procs', pid);
+  let body;
+  if (p) body = previewHead('「' + (it.name || '名前なし') + '」の日:' + (p.name || '名前なし') + (it.procId ? '' : '(タスクの手順書)'), p.steps) +
+    (p.steps.length ? pvList(p.steps, C.numbering(p.steps, S.data), '') : `<p class="pv-hint">この手順書には手順がありません。</p>`);
+  else body = `<p class="pv-hint">「${esc(it.name || '名前なし')}」には手順書がありません。行軍表では「今日は ${esc(it.name || '名前なし')}」とだけ出ます。</p>`;
+  pv.innerHTML = `<div class="ring">${ring}</div>` + body;
+}
+function keepAnchor(c, fn) {
+  const aid = (c.items[c.anchorIndex] || {}).id;
+  fn();
+  const j = c.items.findIndex(x => x.id === aid);
+  c.anchorIndex = j >= 0 ? j : Math.max(0, Math.min(c.anchorIndex, c.items.length - 1));
+}
+function newCycle(tid) {
+  if (!tid) { setStatus('サイクルを作るタスクを選んでください。', true); return; }
+  if (cycleOf(tid)) { openItem('cycles', cycleOf(tid).id); return; }
+  const c = { id: uid('c'), taskId: tid, items: [], rules: [], anchorDate: C.taskDay(), anchorIndex: 0 };
+  S.data.cycles.push(c); touch('cycles', c.id); openItem('cycles', c.id);
+}
+
+/* 範囲 */
+function renderRanges(v) {
+  v.innerHTML = `<div class="listhead"><h2>範囲</h2><button class="btn primary" type="button" data-act="rg-new">新しい範囲を作る</button></div>
+    <p class="info">範囲は「単語帳 401〜500」のように、やるたびに進む区切りです。手順の文に {範囲の名前} と書くと、今日の範囲に置き換わります。</p>` +
+    (S.runsState === 'err' ? `<p class="status err">行軍表の記録を読めなかったので、今の位置は記録を足す前のものです。</p>` : '') +
+    (S.data.ranges.length ? `<div class="plist">` + S.data.ranges.map(r => {
+      const st = rState(r);
+      return `<button type="button" class="pcard" data-act="rg-open" data-id="${esc(r.id)}"><b>${esc(r.name || '名前なし')}</b>` +
+        `<span>今日:${esc(C.rangeText(r, st))}</span>${unsaved('ranges', r.id)}<div class="meter"><i style="width:${rPct(st)}%"></i></div></button>`;
+    }).join('') + `</div>` : `<p class="empty">範囲がまだありません。「新しい範囲を作る」から始めます。</p>`);
+}
+const curRange = () => getItem('ranges', S.open.ranges);
+function renderRange(v) {
+  const r = curRange(), st = rState(r);
+  const uses = rangeUses(r.name);
+  v.innerHTML = `<div class="edhead"><button class="btn quiet" type="button" data-act="back">一覧へ</button>
+      <input class="name" type="text" data-rf="name" data-old="${esc(r.name)}" value="${esc(r.name)}" placeholder="範囲の名前(例:単語帳)" aria-label="範囲の名前">
+      <button class="btn danger" type="button" data-act="rg-del">消す</button></div>
+    <div class="grid"><div class="pvwrap"><div class="sheet" id="pv"></div></div><div id="ed">
+      <div class="box"><h3>区切り方</h3><div class="fields">
+        <label>単位<input type="text" data-rf="unit" value="${esc(r.unit)}" placeholder="例:語、ページ、題"></label>
+        <label>1回に進む量<input type="number" inputmode="numeric" min="1" step="1" data-rf="step" value="${r.step}"></label>
+        <label>始まり<input type="number" inputmode="numeric" step="1" data-rf="start" value="${r.start}"></label>
+        <label>終わり<input type="number" inputmode="numeric" step="1" data-rf="end" value="${r.end}"></label>
+        <label>終わりまで来たら<select data-rf="atEnd"><option value="stop"${r.atEnd === 'stop' ? ' selected' : ''}>止まる</option><option value="loop"${r.atEnd === 'loop' ? ' selected' : ''}>最初に戻る</option></select></label>
+      </div><p class="warnline" id="rgWarn"></p></div>
+      <div class="box"><h3>今の位置を直す</h3>
+        <p class="note">ずれたときや、途中から使い始めるときに。ここで決めた位置に、このあと行軍表で進めた分が足されます。</p>
+        <div class="rrow"><label>次にやる始まり <input type="number" inputmode="numeric" step="1" id="rgPos" value="${st.from}"></label>
+        <button class="btn" type="button" data-act="rg-set">ここからにする</button></div>
+        ${r.set ? `<p class="note">${esc(md(C.taskDay(new Date(r.set.at))))}に ${r.set.pos} からにしました。</p>` : ''}</div>
+      <div class="box"><h3>使っている手順</h3>
+        ${uses.length ? '<p class="note">' + uses.map(u => esc((u.p.name || '名前なし') + (u.coll === 'parts' ? '(部品)' : ''))).join('、') + '</p>'
+          : `<p class="note">まだ使われていません。手順の文に {${esc(r.name || '範囲の名前')}} と書くと使えます。</p>`}</div>
+    </div></div>`;
+  renderRangePreview();
+}
+function rangeWarn(r) {
+  if (!r.name) return '名前を付けると、手順の文から使えます。';
+  if (/[{}]/.test(r.name)) return '名前に { } は使えません。';
+  if (S.data.ranges.some(x => x !== r && x.name === r.name)) return 'ほかの範囲と同じ名前です。手順の文からどちらか分からなくなります。';
+  if (r.end < r.start) return '終わりが始まりより前になっています。';
+  return '';
+}
+function renderRangePreview() {
+  const r = curRange(), pv = $('#pv'); if (!r || !pv) return;
+  const st = rState(r);
+  pv.innerHTML = `<div class="sh-title"><b>${esc(r.name || '名前なし')}</b><span>今日やる範囲</span></div>
+    <div class="big">${esc(C.rangeText(r, st))}</div>
+    <div class="meter"><i style="width:${rPct(st)}%"></i></div>
+    <p class="pv-hint">全体 ${r.start}〜${Math.max(r.end, r.start)}${esc(r.unit)}・1回 ${r.step}${esc(r.unit)}${st.finished ? '' : '・あと' + st.left + '回'}${st.laps ? '・' + st.laps + '周終わり' : ''}</p>
+    <p class="pv-hint">行軍表で進めた回数:${st.n}回${r.set ? '(位置を直したあと)' : ''}${S.runsState === 'err' ? '(記録を読めませんでした)' : ''}</p>`;
+  const w = $('#rgWarn'); if (w) w.textContent = rangeWarn(r);
+}
+
+/* 結びつき */
+function renderLinks(v) {
+  const ids = new Set([...Object.keys(S.data.links), ...S.data.cycles.map(c => c.taskId), ...S.linkRows]);
+  const rows = [...ids].map(tid => ({ tid, t: findTask(tid) })).sort((a, b) =>
+    ((a.t && a.t.ministry) || '').localeCompare((b.t && b.t.ministry) || '', 'ja') || taskName(a.tid).localeCompare(taskName(b.tid), 'ja'));
+  const others = S.tasks.filter(t => !ids.has(t.id));
+  v.innerHTML = `<div class="listhead"><h2>結びつき</h2>${taskSelect(others, 'data-sel="lnadd" aria-label="タスクを足す"')}</div>
+    <p class="info">タスクの手順書は、サイクルが無いタスクと、サイクルの中身に手順書が無いときに使います。${S.tasksMsg ? esc(S.tasksMsg) : ''}</p>` +
+    (rows.length ? rows.map(({ tid, t }) => {
+      const cy = cycleOf(tid);
+      const withProc = cy ? cy.items.filter(i => i.procId).length : 0;
+      return `<div class="lrow" data-tid="${esc(tid)}"><div class="lt"><b>${esc(taskName(tid))}</b><span>${esc(t ? t.ministry || '省なし' : 'タスクの定義にありません')}</span></div>
+        <label>タスクの手順書<select data-sel="link" data-tid="${esc(tid)}">${procOptions(S.data.links[tid], 'なし')}</select></label>
+        <div class="lc">${cy ? `<span>サイクル:${esc(cy.items.map(i => i.name || '名前なし').join(' → ') || '中身なし')}(手順書あり ${withProc}/${cy.items.length})</span><br>
+          <button type="button" class="linkbtn" data-act="cy-open" data-id="${esc(cy.id)}">サイクルを開く</button>`
+          : `<span>サイクルなし</span><br><button type="button" class="linkbtn" data-act="cy-new-for" data-tid="${esc(tid)}">サイクルを作る</button>`}</div></div>`;
+    }).join('') : `<p class="empty">まだ結びつきがありません。右上でタスクを選んで足します。</p>`);
+}
 
 /* ---------- 操作 ---------- */
-function openProc(id) { S.procId = id; S.pick = {}; S.checks = {}; render(); window.scrollTo(0, 0); }
+function openItem(tab, id) { S.tab = tab; S.open[tab] = id; S.pick = {}; S.checks = {}; S.cyPick = 0; render(); window.scrollTo(0, 0); }
 function focusStep(id) {
   const el = document.getElementById('ed-' + id); if (!el) return;
   const f = el.querySelector('textarea, input[type=text]'); if (f) f.focus({ preventScroll: true });
@@ -595,84 +782,209 @@ function flash(id) {
   el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1200);
   el.scrollIntoView && el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
-function hasInner(step) { return step.type === 'branch' && step.options.some(o => o.steps.length); }
+const hasInner = step => step.type === 'branch' && step.options.some(o => o.steps.length);
+
+function deleteProc(p) {
+  const u = procUses(p.id);
+  if (!confirm('「' + (p.name || '名前なし') + '」を消しますか?' + (u.length ? '\n結びつき(' + u.join('、') + ')も外します。' : ''))) return false;
+  for (const [tid, pid] of Object.entries(S.data.links)) if (pid === p.id) { delete S.data.links[tid]; touch('links', tid); }
+  for (const c of S.data.cycles) if (c.items.some(i => i.procId === p.id)) { c.items.forEach(i => { if (i.procId === p.id) i.procId = null; }); touch('cycles', c.id); }
+  S.data.procs.splice(S.data.procs.indexOf(p), 1); drop('procs', p.id);
+  return true;
+}
+function deletePart(p) {
+  const u = partUses(p.id);
+  if (!confirm('部品「' + (p.name || '名前なし') + '」を消しますか?' + (u.length ? '\n使っている手順書(' + u.map(x => x.name || '名前なし').join('、') + ')からも外します。' : ''))) return false;
+  for (const q of u) { removeWhere(q.steps, s => s.type === 'part' && s.partId === p.id); touch('procs', q.id); }
+  S.data.parts.splice(S.data.parts.indexOf(p), 1); drop('parts', p.id);
+  return true;
+}
 
 document.addEventListener('click', e => {
   const tab = e.target.closest('[data-tab]');
-  if (tab) { S.tab = tab.dataset.tab; render(); return; }
+  if (tab) { S.tab = tab.dataset.tab; S.pick = {}; S.checks = {}; render(); return; }
   const pvb = e.target.closest('[data-pv]');
   if (pvb) {
-    const id = pvb.dataset.id;
-    if (pvb.dataset.pv === 'pick') { S.pick[id] = S.pick[id] === pvb.dataset.opt ? undefined : pvb.dataset.opt; renderPreview(); }
-    else if (pvb.dataset.pv === 'check') { S.checks[id] = !S.checks[id]; renderPreview(); }
+    const id = pvb.dataset.id, again = S.tab === 'cycles' ? renderCyclePreview : renderPreview;
+    if (pvb.dataset.pv === 'pick') { S.pick[id] = S.pick[id] === pvb.dataset.opt ? undefined : pvb.dataset.opt; again(); }
+    else if (pvb.dataset.pv === 'check') { S.checks[id] = !S.checks[id]; again(); }
+    else if (pvb.dataset.pv === 'cy') { S.cyPick = +pvb.dataset.i; S.pick = {}; S.checks = {}; renderCyclePreview(); }
     else if (pvb.dataset.pv === 'jump') flash(id);
     return;
   }
   const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
-  const act = b.dataset.act, p = cur();
-  if (act === 'newproc') {
-    const np = { id: uid('p'), name: '', steps: [newStep('do')] };
-    S.data.procs.push(np); touch(np.id); openProc(np.id);
+  const act = b.dataset.act;
+
+  // どのタブでも
+  if (act === 'back') { S.open[S.tab] = null; render(); return; }
+  if (act === 'openpart') { openItem('parts', b.dataset.id); return; }
+  if (act === 'cy-open') { openItem('cycles', b.dataset.id); return; }
+  if (act === 'cy-new') { const sel = $('#cyTask'); newCycle(sel && sel.value); return; }
+  if (act === 'cy-new-for') { newCycle(b.dataset.tid); return; }
+  if (act === 'rg-open') { openItem('ranges', b.dataset.id); return; }
+  if (act === 'rg-new') {
+    const r = { id: uid('r'), name: '', unit: '', start: 1, end: 100, step: 10, atEnd: 'stop', created: C.taskDay(), set: null };
+    S.data.ranges.push(r); touch('ranges', r.id); openItem('ranges', r.id); const n = $('.edhead .name'); if (n) n.focus();
+    return;
+  }
+
+  // 範囲
+  const r = S.tab === 'ranges' ? curRange() : null;
+  if (r) {
+    if (act === 'rg-del') {
+      const u = rangeUses(r.name);
+      if (!confirm('範囲「' + (r.name || '名前なし') + '」を消しますか?' + (u.length ? '\n使っている手順の {' + r.name + '} は、範囲の無い印になります。' : ''))) return;
+      S.data.ranges.splice(S.data.ranges.indexOf(r), 1); drop('ranges', r.id); S.open.ranges = null; render();
+    } else if (act === 'rg-set') {
+      const v = $('#rgPos').value.trim();
+      if (v === '' || isNaN(+v)) { setStatus('次にやる始まりを数で入れてください。', true); return; }
+      r.set = { pos: Math.round(+v), at: new Date().toISOString() }; touch('ranges', r.id); render();
+      setStatus('今の位置を ' + r.set.pos + ' からにしました。');
+    }
+    return;
+  }
+
+  // サイクル
+  const c = S.tab === 'cycles' ? curCycle() : null;
+  if (c) {
+    const idx = c.items.findIndex(x => x.id === b.dataset.iid);
+    if (act === 'cy-del') {
+      if (!confirm(taskName(c.taskId) + 'のサイクルを消しますか?')) return;
+      S.data.cycles.splice(S.data.cycles.indexOf(c), 1); drop('cycles', c.id); S.open.cycles = null; render(); return;
+    }
+    if (act === 'cy-add') { const it = { id: uid('i'), name: '', procId: null }; c.items.push(it); touch('cycles', c.id); renderCycleEd(); const i = $(`[data-cf="iname"][data-iid="${it.id}"]`); if (i) i.focus(); return; }
+    if (act === 'cy-copyold') {
+      const t = findTask(c.taskId); if (!t || !t.oldCycle) return;
+      c.items = t.oldCycle.items.map(n => ({ id: uid('i'), name: String(n), procId: null }));
+      c.anchorDate = t.oldCycle.anchorDate || C.taskDay();
+      c.anchorIndex = Math.max(0, Math.min(+t.oldCycle.anchorIndex || 0, c.items.length - 1));
+      touch('cycles', c.id); renderCycleEd(); return;
+    }
+    if ((act === 'cy-up' || act === 'cy-down') && idx >= 0) {
+      const j = idx + (act === 'cy-up' ? -1 : 1); if (j < 0 || j >= c.items.length) return;
+      keepAnchor(c, () => { const [it] = c.items.splice(idx, 1); c.items.splice(j, 0, it); });
+      touch('cycles', c.id); renderCycleEd(); return;
+    }
+    if (act === 'cy-rm' && idx >= 0) {
+      keepAnchor(c, () => c.items.splice(idx, 1)); S.cyPick = 0;
+      touch('cycles', c.id); renderCycleEd(); return;
+    }
+    if (act === 'rule-add') { c.rules.push(''); touch('cycles', c.id); renderCycleEd(); const i = $$last('[data-cf="rule"]'); if (i) i.focus(); return; }
+    if (act === 'rule-rm') { c.rules.splice(+b.dataset.ri, 1); touch('cycles', c.id); renderCycleEd(); return; }
+    return;
+  }
+
+  // 手順書・部品
+  if (act === 'newitem') {
+    const coll = S.tab, isPart = coll === 'parts';
+    const np = { id: uid(isPart ? 't' : 'p'), name: '', steps: [newStep('do')] };
+    S.data[coll].push(np); touch(coll, np.id); openItem(coll, np.id);
     const n = $('.edhead .name'); if (n) n.focus();
     return;
   }
-  if (act === 'open') { openProc(b.dataset.pid); return; }
-  if (act === 'back') { S.procId = null; render(); return; }
-  if (!p) return;
-  if (act === 'dupproc') {
-    const c = clone(p); c.id = uid('p'); c.name = (p.name || '名前なし') + 'のコピー'; c.steps = c.steps.map(renewIds);
-    S.data.procs.splice(S.data.procs.indexOf(p) + 1, 0, c); touch(c.id); openProc(c.id); setStatus('複製しました。');
+  if (act === 'open') { openItem(S.tab, b.dataset.id); return; }
+  const p = cur(); if (!p) return;
+  const coll = S.tab;
+  if (act === 'dupitem') {
+    const cp = clone(p); cp.id = uid(coll === 'parts' ? 't' : 'p'); cp.name = (p.name || '名前なし') + 'のコピー'; cp.steps = cp.steps.map(renewIds);
+    S.data[coll].splice(S.data[coll].indexOf(p) + 1, 0, cp); touch(coll, cp.id); openItem(coll, cp.id); setStatus('複製しました。');
     return;
   }
-  if (act === 'delproc') {
-    if (!confirm('「' + (p.name || '名前なし') + '」を消しますか?(保存するまではGitHubには残ります)')) return;
-    S.data.procs.splice(S.data.procs.indexOf(p), 1);
-    S.dirty.delete(p.id); S.removed.add(p.id); saveCacheSoon(); S.procId = null; render();
+  if (act === 'delitem') {
+    if ((coll === 'parts' ? deletePart : deleteProc)(p)) { S.open[coll] = null; render(); }
     return;
   }
   let focusId = null;
   if (act === 'add') { const s = ops.add(p, b.dataset.key, b.dataset.type); if (!s) return; focusId = s.id; }
   else if (act === 'up' || act === 'down') { if (!ops.move(p, b.dataset.id, act === 'up' ? -1 : 1)) return; }
-  else if (act === 'dup') { const c = ops.dup(p, b.dataset.id); if (!c) return; focusId = c.id; }
+  else if (act === 'dup') { const cp = ops.dup(p, b.dataset.id); if (!cp) return; focusId = cp.id; }
   else if (act === 'del') {
     const l = locate(p, b.dataset.id); if (!l) return;
     if (hasInner(l.step) && !confirm('この分かれ道と、その中の手順をまとめて消しますか?')) return;
     ops.remove(p, b.dataset.id);
   }
-  else if (act === 'addopt') { const o = ops.addOpt(p, b.dataset.id); if (!o) return; touch(p.id); renderSteps(); const i = document.querySelector(`input[data-opt="${o.id}"]`); if (i) i.focus(); return; }
+  else if (act === 'addopt') { const o = ops.addOpt(p, b.dataset.id); if (!o) return; touch(coll, p.id); renderSteps(); const i = $(`input[data-opt="${o.id}"]`); if (i) i.focus(); return; }
   else if (act === 'delopt') {
-    const r = locateOpt(p, b.dataset.opt); if (!r) return;
-    if (r.option.steps.length && !confirm('この選択肢と、その中の手順をまとめて消しますか?')) return;
+    const ro = locateOpt(p, b.dataset.opt); if (!ro) return;
+    if (ro.option.steps.length && !confirm('この選択肢と、その中の手順をまとめて消しますか?')) return;
     if (!ops.removeOpt(p, b.dataset.opt)) return;
   }
   else return;
-  touch(p.id); renderSteps();
+  touch(coll, p.id); renderSteps();
   if (focusId) focusStep(focusId);
 });
+function $$last(sel) { const a = document.querySelectorAll(sel); return a[a.length - 1]; }
 
 document.addEventListener('input', e => {
-  const t = e.target, f = t.dataset && t.dataset.f; if (!f) return;
-  const p = cur(); if (!p) return;
-  if (f === 'name') p.name = t.value;
-  else if (f === 'label') { const r = locateOpt(p, t.dataset.opt); if (!r) return; r.option.label = t.value; }
-  else {
-    const l = locate(p, t.dataset.id); if (!l) return;
-    if (f === 'min') { const v = t.value.trim(); l.step.min = v === '' || isNaN(+v) ? null : Math.max(0, +v); }
-    else l.step[f] = t.value;
+  const t = e.target; if (!t.dataset || t.tagName === 'SELECT') return;
+  if (t.dataset.f) {
+    const p = cur(); if (!p) return;
+    const f = t.dataset.f;
+    if (f === 'name') p.name = t.value;
+    else if (f === 'label') { const r = locateOpt(p, t.dataset.opt); if (!r) return; r.option.label = t.value; }
+    else {
+      const l = locate(p, t.dataset.id); if (!l) return;
+      if (f === 'min') { const v = t.value.trim(); l.step.min = v === '' || isNaN(+v) ? null : Math.max(0, +v); }
+      else l.step[f] = t.value;
+    }
+    if (t.tagName === 'TEXTAREA') autosize(t);
+    touch(S.tab, p.id); previewSoon(renderPreview);
+  } else if (t.dataset.rf) {
+    const r = curRange(); if (!r) return;
+    const f = t.dataset.rf;
+    if (f === 'name' || f === 'unit') r[f] = t.value;
+    else { const v = t.value.trim(); if (v === '' || isNaN(+v)) return; r[f] = f === 'step' ? Math.max(1, Math.round(+v)) : Math.round(+v); }
+    touch('ranges', r.id); previewSoon(renderRangePreview);
+  } else if (t.dataset.cf) {
+    const c = curCycle(); if (!c) return;
+    if (t.dataset.cf === 'iname') { const it = c.items.find(x => x.id === t.dataset.iid); if (!it) return; it.name = t.value; }
+    else if (t.dataset.cf === 'rule') c.rules[+t.dataset.ri] = t.value;
+    touch('cycles', c.id); previewSoon(renderCyclePreview);
   }
-  if (t.tagName === 'TEXTAREA') autosize(t);
-  touch(p.id); renderPreviewSoon();
+});
+
+document.addEventListener('change', e => {
+  const t = e.target, d = t.dataset || {};
+  if (d.sel === 'addpart') {
+    const p = cur(); if (!p || !t.value) return;
+    ops.addPart(p, d.key, t.value); touch(S.tab, p.id); renderSteps();
+  } else if (d.sel === 'link') {
+    if (t.value) S.data.links[d.tid] = t.value; else delete S.data.links[d.tid];
+    S.linkRows.add(d.tid); touch('links', d.tid); render();
+  } else if (d.sel === 'lnadd') {
+    if (!t.value) return; S.linkRows.add(t.value); render();
+  } else if (d.cf === 'iproc') {
+    const c = curCycle(), it = c && c.items.find(x => x.id === d.iid); if (!it) return;
+    it.procId = t.value || null; touch('cycles', c.id); renderCyclePreview();
+  } else if (d.cf === 'start') {
+    const c = curCycle(); if (!c) return;
+    c.anchorIndex = +t.value; c.anchorDate = C.taskDay(); touch('cycles', c.id); renderCyclePreview();
+  } else if (d.rf === 'atEnd') {
+    const r = curRange(); if (!r) return;
+    r.atEnd = t.value === 'loop' ? 'loop' : 'stop'; touch('ranges', r.id); renderRangePreview();
+  } else if (d.rf === 'name') {
+    // 名前を変えたら、手順の文の {古い名前} も書き換えるかたずねる
+    const r = curRange(), old = d.old || '', nw = t.value;
+    if (!r || old === nw) return;
+    const u = old ? rangeUses(old) : [];
+    if (u.length && !/[{}]/.test(nw) && nw && confirm('手順の中の {' + old + '}(' + u.reduce((a, x) => a + x.n, 0) + 'か所)も {' + nw + '} に書き換えますか?')) {
+      const re = new RegExp('\\{' + old.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\}', 'g');
+      for (const x of u) {
+        C.walk(x.p.steps, s => { if (s.type === 'do') s.text = s.text.replace(re, '{' + nw + '}'); else if (s.type === 'branch') s.question = s.question.replace(re, '{' + nw + '}'); });
+        touch(x.coll, x.p.id);
+      }
+    }
+    render();
+  }
 });
 
 $('#saveBtn').addEventListener('click', save);
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); }
-});
+document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); } });
 $('#connToggle').addEventListener('click', () => { S.connOpen = !S.connOpen; render(); });
 $('#cGo').addEventListener('click', () => {
   const repo = $('#cRepo').value.trim() || DEFAULT_REPO, token = $('#cToken').value.trim();
   localStorage.setItem(LS_CONN, JSON.stringify({ repo, token }));
-  S.connOpen = false; load();
+  gh.repoOk = false; S.connOpen = false; load();
 });
 window.addEventListener('pagehide', saveCache);
 
@@ -685,7 +997,7 @@ function boot() {
   else { S.connOpen = true; render(); setStatus(errMsg({ status: 'noconn' }), true); }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js?v=' + APP_VERSION).catch(() => {});
 }
-window.TJ = { S, ops, numbering, span, fmtSpan, normalize, b64enc, b64dec, commit, load, save, render, APP_VERSION };
+window.TJ = { S, C, ops, commit, load, save, render, APP_VERSION };
 boot();
 </script>
 </body>
