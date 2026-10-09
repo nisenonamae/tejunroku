@@ -239,11 +239,23 @@ details.addtask[open] summary{margin-bottom:8px}
   <button class="btn primary" id="saveBtn" type="button">保存する</button>
 </div>
 
-<script src="core.js"></script>
+<script src="core.js?v=5"></script>
 <script>
 'use strict';
-const APP_VERSION = 4;
-const C = window.TJCore;
+const APP_VERSION = 5;
+let C = window.TJCore;
+// この画面が使う計算。古い core.js が端末に残っていると無いので、そのときは新しいものを取り直す
+const CORE_NEEDS = ['fmtStep', 'stepTime', 'sectionSpan', 'numbering', 'span'];
+const coreOk = () => !!window.TJCore && CORE_NEEDS.every(k => typeof window.TJCore[k] === 'function');
+function refreshCore() {
+  return new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'core.js?fresh=' + Date.now();
+    sc.onload = () => { C = window.TJCore; res(coreOk()); };
+    sc.onerror = () => res(false);
+    document.head.appendChild(sc);
+  });
+}
 const BASE = 'roadmap/apps/tejunroku';
 const DATA_PATH = BASE + '/data.json', RUNS_DIR = BASE + '/runs';
 const DEFS_PATH = 'roadmap/tasks/defs.json', OVERLAY_PATH = 'roadmap/tasks/overlay.json';
@@ -697,6 +709,10 @@ function previewHead(title, steps) {
 }
 function renderPreview() {
   const p = cur(); const pv = $('#pv'); if (!p || !pv) return;
+  try { drawPreview(p, pv); }
+  catch (e) { pv.innerHTML = `<p class="pv-hint">見本を出せませんでした。アプリを閉じて開き直してください。直らないときは、接続の欄の「今開いている版」を確かめてください。</p>`; }
+}
+function drawPreview(p, pv) {
   pv.innerHTML = previewHead(p.name || '名前なし', p.steps) +
     `<p class="sh-note">実行したときの見本です。丸を押すと済みの印、分かれ道は選ぶと先が出ます(どちらも保存はしません)。</p>` +
     (p.steps.length ? pvList(p.steps, C.numbering(p.steps, S.data), '') : `<p class="pv-hint">右(スマホでは下)で手順を足すと、ここに出ます。</p>`);
@@ -1129,11 +1145,12 @@ function boot() {
   const c = getConn();
   $('#cRepo').value = c.repo || DEFAULT_REPO; $('#cToken').value = c.token || '';
   loadCache(); render();
+  if (!coreOk()) refreshCore().then(ok => { if (ok) render(); else setStatus('計算の部分(core.js)が古いままです。アプリを閉じて開き直してください。', true); });
   if (c.repo && c.token) load();
   else { S.connOpen = true; render(); setStatus(errMsg({ status: 'noconn' }), true); }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js?v=' + APP_VERSION).catch(() => {});
 }
-window.TJ = { S, C, ops, commit, load, save, render, APP_VERSION, EX };
+window.TJ = { S, get C() { return C; }, ops, commit, load, save, render, APP_VERSION, EX };
 boot();
 </script>
 <style>.se-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:.5rem 0;font-size:.86rem}.se-btn{min-width:2.6rem;border:1px solid #bbb;border-radius:999px;background:#fff;padding:.1rem .7rem;font:inherit;cursor:pointer}.se-btn[aria-pressed="true"]{background:#1f2328;color:#fff;border-color:#1f2328}.se-vol{display:flex;align-items:center;gap:.3rem}.se-vol input{width:8rem}</style>

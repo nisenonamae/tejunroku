@@ -8,8 +8,16 @@ const HTML = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const DATA = 'roadmap/apps/tejunroku/data.json';
 const CORE = fs.readFileSync(path.join(__dirname, 'core.js'));
 const Core = require('./core.js');
+// 古い core.js(版3まで:時間の幅・区切りの計算が無い)。端末に残っていたときの再現に使う
+const OLD_CORE = Buffer.from(CORE.toString().replace(/fmtStep, stepTime, sectionSpan,/, ''));
 class Loader extends ResourceLoader {
-  fetch(url, opts) { return url.endsWith('/core.js') ? Promise.resolve(CORE) : null; }
+  constructor(old) { super(); this.old = old; this.asked = []; }
+  fetch(url, opts) {
+    this.asked.push(url);
+    if (!new URL(url).pathname.endsWith('/core.js')) return null;
+    // 古いものが残っている場合:ふつうに読むと古いもの、取り直すと新しいもの
+    return Promise.resolve(this.old && !url.includes('fresh=') ? OLD_CORE : CORE);
+  }
 }
 
 /* GitHub のにせもの */
@@ -47,9 +55,10 @@ function makeGH() {
   return gh;
 }
 
-async function open(gh, storage, noConn) {
+async function open(gh, storage, noConn, oldCore) {
+  const loader = new Loader(oldCore);
   const dom = new JSDOM(HTML, {
-    url: 'https://nisenonamae.github.io/tejunroku/', runScripts: 'dangerously', pretendToBeVisual: true, resources: new Loader(),
+    url: 'https://nisenonamae.github.io/tejunroku/', runScripts: 'dangerously', pretendToBeVisual: true, resources: loader,
     beforeParse(w) {
       w.fetch = gh.fetch; w.confirm = () => true; w.scrollTo = () => {};
       w.Element.prototype.scrollIntoView = function () {};
@@ -58,7 +67,8 @@ async function open(gh, storage, noConn) {
     }
   });
   await new Promise(r => dom.window.addEventListener('load', r));
-  await settle(dom);
+  await settle(dom); await wait(dom, 50); await settle(dom);
+  dom.loader = loader;
   return dom;
 }
 const settle = async dom => { for (let i = 0; i < 8; i++) await new Promise(r => dom.window.setTimeout(r, 0)); };
@@ -100,7 +110,7 @@ const test = (name, fn) => tests.push([name, fn]);
 
 test('版が出て、データが無いときは最初の保存で作ると出る', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  assert.match($(dom, '#ver').textContent, /今開いている版:4/);
+  assert.match($(dom, '#ver').textContent, /今開いている版:5/);
   assert.match(status(dom), /最初に保存したときに作ります/);
   assert.match($(dom, '.empty').textContent, /手順書がまだありません/);
   assert.strictEqual($(dom, '#bar').hidden, true);
@@ -687,6 +697,36 @@ test('計算:時間の幅と区切りの時間', async () => {
   assert.strictEqual(Core.fmtSpan(Core.sectionSpan(st, 0)), '15〜20分');
   assert.strictEqual(Core.fmtSpan(Core.sectionSpan(st, 3)), '');
   assert.deepStrictEqual(Core.numbering(st), { b: '1', c: '2', e: '3' });
+});
+
+
+/* ---------- 版5:古い core.js が端末に残っていても見本が出る ---------- */
+test('core.js は版を付けて読み込む(古いものを拾わない)', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  assert(dom.loader.asked.some(u => /core\.js\?v=\d+$/.test(u)));
+  assert(!dom.loader.asked.some(u => u.includes('fresh=')), '新しいものなら取り直さない');
+});
+
+test('古い core.js が残っていたら、新しいものを取り直して見本を出す', async () => {
+  assert(!OLD_CORE.toString().includes('fmtStep, stepTime'), '古い core の再現ができている');
+  const gh = makeGH(); const dom = await open(gh, {}, false, true);
+  assert(dom.loader.asked.some(u => u.includes('fresh=')), '取り直した');
+  assert.strictEqual(typeof dom.window.TJ.C.fmtStep, 'function');
+  await buildExample(dom);
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3']);
+  assert.match($(dom, '#pv .pvTotal').textContent, /合計 20〜35分/);
+  assert.strictEqual($(dom, '#status').classList.contains('err'), false);
+});
+
+test('見本でつまずいても、空にせず知らせる', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  await buildExample(dom);
+  dom.window.TJ.C.fmtStep = () => { throw new Error('こわれた'); };
+  type(dom, $$(dom, '#ed textarea')[0], 'もう一度描く');
+  await wait(dom, 200);
+  assert.match($(dom, '#pv').textContent, /見本を出せませんでした/);
+  assert(!$(dom, '#ed').textContent.includes('見本を出せませんでした'), '右の編集はそのまま');
+  assert.strictEqual($$(dom, '#ed .st').length, 6);
 });
 
 (async () => {

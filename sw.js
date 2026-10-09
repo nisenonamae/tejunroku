@@ -1,10 +1,12 @@
 // 版は index.html の APP_VERSION から ?v= で渡される
+// 通信できるときは、どのファイルも必ず新しいものを取りに行く(画面と計算の部分の版がずれないように)。
+// 通信できないときだけ、前に開いたときのものを出す。GitHub の API には触れない。
 const V = new URL(self.location).searchParams.get('v') || '0';
 const CACHE = 'tejunroku-v' + V;
 const FILES = ['./', './index.html', './core.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).catch(() => {}).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -13,12 +15,9 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return; // GitHub API はそのまま通す
-  if (req.mode === 'navigate' || req.url.endsWith('.html')) {
-    // 画面は新しいものを先に取りに行き、つながらなければ保存しておいたもの
-    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put(req, c)); return r; })
-      .catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
-    return;
-  }
-  e.respondWith(caches.match(req).then(r => r || fetch(req)));
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then(r => {
+    if (r && r.ok) { const c = r.clone(); caches.open(CACHE).then(x => x.put(req, c)).catch(() => {}); }
+    return r;
+  }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || (req.mode === 'navigate' ? caches.match('./index.html') : undefined))));
 });
