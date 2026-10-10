@@ -110,7 +110,7 @@ const test = (name, fn) => tests.push([name, fn]);
 
 test('版が出て、データが無いときは最初の保存で作ると出る', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  assert.match($(dom, '#ver').textContent, /今開いている版:5/);
+  assert.match($(dom, '#ver').textContent, /今開いている版:6/);
   assert.match(status(dom), /最初に保存したときに作ります/);
   assert.match($(dom, '.empty').textContent, /手順書がまだありません/);
   assert.strictEqual($(dom, '#bar').hidden, true);
@@ -570,8 +570,8 @@ test('例:手順書の例を入れると、範囲と部品の例も一緒に入�
   assert.strictEqual($(dom, '.edhead .name').value, '例:長文の日');
   assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3', '4', '4-a', '4-b']);
   assert.strictEqual($(dom, '#pv .rng').textContent, '例の単語帳 401〜500番');
-  assert.deepStrictEqual($$(dom, '#pv .pv-sec-t').map(e => e.textContent), ['長文', '単語']);
-  assert.deepStrictEqual($$(dom, '#pv .pv-sec-m').map(e => e.textContent), ['35〜45分', '15〜20分']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec-t').map(e => e.textContent), ['長文', '解く', '直す', '単語']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec-m').map(e => e.textContent), ['35〜45分', '20〜25分', '15〜20分', '15〜20分']);
   assert.match($(dom, '#pv .pvTotal').textContent, /合計 50分〜1時間5分/);
   click(dom, $$(dom, '#pv [data-pv="pick"]')[1]);
   assert.match($(dom, '#pv').textContent, /間違えた設問の理由を書く/);
@@ -584,7 +584,7 @@ test('例:手順書の例を入れると、範囲と部品の例も一緒に入�
   const d = gh.json(DATA);
   assert.deepStrictEqual([d.procs.length, d.parts.length, d.ranges.length], [1, 1, 1]);
   assert.strictEqual(d.procs[0].steps.find(x => x.type === 'part').partId, d.parts[0].id);
-  assert.deepStrictEqual(d.procs[0].steps.filter(x => x.type === 'section').map(x => x.title), ['長文', '単語']);
+  assert.deepStrictEqual(d.procs[0].steps.filter(x => x.type === 'section').map(x => x.title + x.level), ['長文1', '解く2', '直す2', '単語1']);
 });
 
 test('例:範囲・部品のタブだけで入れることもでき、サイクルは空のときだけ例を入れられる', async () => {
@@ -656,6 +656,7 @@ test('区切り:足して名前を付けると、見本で次の区切りまで�
   click(dom, $(dom, '#saveBtn')); await settle(dom);
   const st = gh.json(DATA).procs[0].steps;
   assert.deepStrictEqual(st.map(x => x.type), ['section', 'do', 'do', 'section', 'do']);
+  assert.deepStrictEqual(st.filter(x => x.type === 'section').map(x => x.level), [1, 1]);
   assert.deepStrictEqual([st[0].title, st[1].min, st[1].max, st[2].min, st[2].max], ['英解釈', 10, 15, null, 20]);
 });
 
@@ -727,6 +728,52 @@ test('見本でつまずいても、空にせず知らせる', async () => {
   assert.match($(dom, '#pv').textContent, /見本を出せませんでした/);
   assert(!$(dom, '#ed').textContent.includes('見本を出せませんでした'), '右の編集はそのまま');
   assert.strictEqual($$(dom, '#ed .st').length, 6);
+});
+
+
+/* ---------- 版6:区切りの中の区切り ---------- */
+test('区切りの中に小さい区切り:英解釈(大)の中に例題・類題(中)。大きい区切りの時間は中の分も入る', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  click(dom, $(dom, '[data-act="newitem"]'));
+  click(dom, $(dom, '#ed .st.do [data-act="del"]'));          // 最初の空のやることは消す
+  const addSec = (title, lv) => {
+    click(dom, lastAdd(dom, 'root', 'section'));
+    const sec = $$(dom, '#ed .st.sec').pop();
+    type(dom, sec.querySelector('input[data-f="title"]'), title);
+    if (lv > 1) change(dom, sec.querySelector('select[data-f="level"]'), String(lv));
+  };
+  const addDo = (text, a, b) => {
+    click(dom, lastAdd(dom, 'root', 'do'));
+    const st = $$(dom, '#ed .st.do').pop();
+    type(dom, st.querySelector('textarea'), text);
+    if (a != null) type(dom, st.querySelector('input[data-f="min"]'), String(a));
+    if (b != null) type(dom, st.querySelector('input[data-f="max"]'), String(b));
+  };
+  addSec('英解釈', 1);
+  addSec('例題', 2); addDo('例題を解く', 10, 15); addDo('解説を読む', 5);
+  addSec('類題', 2); addDo('類題を解く', 15, 20);
+  addSec('英文法', 1); addDo('問題集を2ページ', 30);
+  await wait(dom, 200);
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec').map(e => e.className.replace('pv-sec ', '') + ':' + e.textContent),
+    ['lv1:英解釈30〜40分', 'lv2:例題15〜20分', 'lv2:類題15〜20分', 'lv1:英文法30分']);
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2', '3', '4']);
+  // 編集でも、小さい区切りは一段下げて出る
+  assert.deepStrictEqual($$(dom, '#ed .st.sec').map(e => e.className.match(/lv\d/)[0]), ['lv1', 'lv2', 'lv2', 'lv1']);
+  assert.strictEqual($$(dom, '#ed .st.sec select')[1].value, '2');
+  // 大きさを戻すと、まとまり方も変わる
+  change(dom, $$(dom, '#ed .st.sec select')[2], '1');          // 類題を大に
+  assert.deepStrictEqual($$(dom, '#pv .pv-sec-m').map(e => e.textContent), ['15〜20分', '15〜20分', '15〜20分', '30分']);
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  assert.deepStrictEqual(gh.json(DATA).procs[0].steps.filter(x => x.type === 'section').map(x => x.title + x.level), ['英解釈1', '例題2', '類題1', '英文法1']);
+});
+
+test('計算:区切りの大きさ(前の版の区切りは大として扱う)', async () => {
+  const st = Core.normalize({ procs: [{ steps: [
+    { type: 'section', title: 'A' }, { type: 'section', title: 'a1', level: 2 }, { type: 'do', min: 1 }, { type: 'section', title: 'x', level: 3 }, { type: 'do', min: 2 },
+    { type: 'section', title: 'a2', level: 2 }, { type: 'do', min: 4 }, { type: 'section', title: 'B', level: 9 }, { type: 'do', min: 8 }] }] }).procs[0].steps;
+  assert.deepStrictEqual(st.filter(x => x.type === 'section').map(x => x.level), [1, 2, 3, 2, 3]);
+  const sp = i => Core.fmtSpan(Core.sectionSpan(st, i));
+  assert.deepStrictEqual([sp(0), sp(1), sp(3), sp(5), sp(7)], ['15分', '3分', '2分', '12分', '8分']);
 });
 
 (async () => {

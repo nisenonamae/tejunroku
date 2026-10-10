@@ -38,6 +38,7 @@
         s.partId = s.partId || '';
       } else if (s.type === 'section') {
         s.title = s.title || '';                      // 区切り:ここから次の区切りまでをひとまとまりとして見せる
+        s.level = Math.min(3, Math.max(1, Math.round(num(s.level, 1))));   // 大きさ 1=大 2=中 3=小。小さい区切りは大きい区切りの中に入る
       } else {
         s.type = 'do'; s.text = s.text || ''; s.min = num(s.min, null); s.max = num(s.max, null);   // 時間は 短いとき〜長いとき
       }
@@ -144,10 +145,14 @@
     const x = a == null ? b : a, y = b == null ? a : b;
     return { lo: Math.max(0, Math.min(x, y)), hi: Math.max(0, x, y) };
   }
-  // 区切り(steps[i])から次の区切りまでの時間
+  // 区切り(steps[i])から、次の同じか大きい区切りまでの時間(中の小さい区切りの分も入る)
   function sectionSpan(steps, i, data, pick) {
-    const part = [];
-    for (let j = i + 1; j < steps.length && steps[j].type !== 'section'; j++) part.push(steps[j]);
+    const lv = +steps[i].level || 1, part = [];
+    for (let j = i + 1; j < steps.length; j++) {
+      const x = steps[j];
+      if (x.type === 'section') { if ((+x.level || 1) <= lv) break; continue; }
+      part.push(x);
+    }
     return span(part, data, pick);
   }
   function allPicked(steps, pick, data) {

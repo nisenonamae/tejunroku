@@ -100,6 +100,16 @@ main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
 .pv-text,.pv-q{white-space:pre-wrap;word-break:break-word}
 .pv-sec{margin:6px 0 12px -26px;padding:5px 10px;background:var(--ink);color:#fff;border-radius:4px;display:flex;justify-content:space-between;gap:10px;align-items:baseline;cursor:pointer;position:relative;z-index:1}
 .pv-list.inner > .pv-sec{margin-left:-24px;background:var(--sub)}
+.pv-list .pv-sec.lv2{background:#E1E7EB;color:var(--ink);margin-left:-12px;border-left:4px solid var(--ink);border-radius:0 4px 4px 0;padding:3px 10px}
+.pv-list .pv-sec.lv2 .pv-sec-m{color:var(--sub)}
+.pv-list .pv-sec.lv3{background:transparent;color:var(--ink);margin-left:0;border-radius:0;border-bottom:1px dashed var(--sub);padding:1px 2px;font-size:.9375rem}
+.pv-list .pv-sec.lv3 .pv-sec-m{color:var(--sub)}
+.pv-list .pv-sec.lv2 .pv-sec-t .pv-blank,.pv-list .pv-sec.lv3 .pv-sec-t .pv-blank{color:var(--sub)}
+.st.sec.lv2{margin-left:16px;background:#F3F5F7}
+.st.sec.lv3{margin-left:32px;background:#F8F9FA}
+.lvsel{font-size:.8125rem;padding:1px 4px}
+.pt-sum .pt-sec.lv2{margin-left:-.7em;font-weight:400}
+.pt-sum .pt-sec.lv3{margin-left:0;font-weight:400;font-size:.8125rem}
 .pv-sec-t{font-weight:700;letter-spacing:.04em}
 .pv-sec-t .pv-blank{color:#C9D2D8}
 .pv-sec-m{font-size:.8125rem;color:#D7DEE3;white-space:nowrap}
@@ -239,10 +249,10 @@ details.addtask[open] summary{margin-bottom:8px}
   <button class="btn primary" id="saveBtn" type="button">保存する</button>
 </div>
 
-<script src="core.js?v=5"></script>
+<script src="core.js?v=6"></script>
 <script>
 'use strict';
-const APP_VERSION = 5;
+const APP_VERSION = 6;
 let C = window.TJCore;
 // この画面が使う計算。古い core.js が端末に残っていると無いので、そのときは新しいものを取り直す
 const CORE_NEEDS = ['fmtStep', 'stepTime', 'sectionSpan', 'numbering', 'span'];
@@ -351,7 +361,7 @@ function listByKey(proc, key) { if (key === 'root') return proc.steps; const r =
 function newStep(type) {
   if (type === 'branch') return { id: uid('s'), type: 'branch', question: '', options: [
     { id: uid('o'), label: 'はい', steps: [] }, { id: uid('o'), label: 'いいえ', steps: [] }] };
-  if (type === 'section') return { id: uid('s'), type: 'section', title: '' };
+  if (type === 'section') return { id: uid('s'), type: 'section', title: '', level: 1 };
   return { id: uid('s'), type: 'do', text: '', min: null, max: null };
 }
 function renewIds(step) {
@@ -586,14 +596,16 @@ function exProc() {
   const part = exPart(); exRange();
   const sid = () => uid('s'), oid = () => uid('o');
   p = { id: uid('p'), name: EX.proc, steps: [
-    { id: sid(), type: 'section', title: '長文' },
+    { id: sid(), type: 'section', title: '長文', level: 1 },
+    { id: sid(), type: 'section', title: '解く', level: 2 },
     { id: sid(), type: 'do', text: '時間を計って長文を1題解く', min: 20, max: 25 },
+    { id: sid(), type: 'section', title: '直す', level: 2 },
     { id: sid(), type: 'branch', question: '全問正解だった?', options: [
       { id: oid(), label: 'はい', steps: [{ id: sid(), type: 'do', text: '次の難しさの長文を1題', min: 15 }] },
       { id: oid(), label: 'いいえ', steps: [
         { id: sid(), type: 'do', text: '間違えた設問の理由を書く', min: 10 },
         { id: sid(), type: 'do', text: '該当する段落を音読3回', min: 10 }] }] },
-    { id: sid(), type: 'section', title: '単語' },
+    { id: sid(), type: 'section', title: '単語', level: 1 },
     { id: sid(), type: 'do', text: '単語帳の {' + EX.range + '} を1周\n覚えていなかった番号に印を付ける', min: 10, max: 15 },
     { id: sid(), type: 'part', partId: part.id }] };
   S.data.procs.push(p); touch('procs', p.id);
@@ -658,6 +670,7 @@ function edList(steps, k, labels) {
     `<button type="button" class="fork" data-act="add" data-type="branch" data-key="${k}">＋ 分かれ道</button>` +
     `<button type="button" class="secb" data-act="add" data-type="section" data-key="${k}">＋ 区切り</button>${partSel}</div></div>`;
 }
+const SEC_LV = ['大', '中', '小'];
 function edStep(s, i, n, labels) {
   const head = kind => `<div class="st-head"><span class="st-num">${labels[s.id] || ''}</span><span class="st-kind">${kind}</span>${tools(s, i, n)}</div>`;
   if (s.type === 'branch') {
@@ -671,14 +684,16 @@ function edStep(s, i, n, labels) {
       <p class="merge">選んだ道が終わったら、分かれ道の次の手順へ合流します。</p></div>`;
   }
   if (s.type === 'section') {
-    return `<div class="st sec" id="ed-${s.id}" data-id="${s.id}"><div class="st-head"><span class="st-kind">区切り</span>${tools(s, i, n)}</div>
-      <input type="text" data-f="title" data-id="${s.id}" value="${esc(s.title)}" placeholder="区切りの名前(例:英解釈)" aria-label="区切りの名前">
-      <p class="merge">ここから次の区切りまでが、ひとまとまりになります。</p></div>`;
+    const lv = +s.level || 1;
+    return `<div class="st sec lv${lv}" id="ed-${s.id}" data-id="${s.id}"><div class="st-head"><span class="st-kind">区切り</span>
+      <select class="lvsel" data-f="level" data-id="${s.id}" aria-label="区切りの大きさ">${SEC_LV.map((l, k) => `<option value="${k + 1}"${k + 1 === lv ? ' selected' : ''}>${l}</option>`).join('')}</select>${tools(s, i, n)}</div>
+      <input type="text" data-f="title" data-id="${s.id}" value="${esc(s.title)}" placeholder="${['区切りの名前(例:英解釈)', '中の区切りの名前(例:例題)', '細かい区切りの名前(例:1問目)'][lv - 1]}" aria-label="区切りの名前">
+      <p class="merge">${lv === 1 ? 'ここから次の区切りまでが、ひとまとまりになります。' : '上の大きい区切りの中で、ここから次の同じか大きい区切りまでが、ひとまとまりになります。'}</p></div>`;
   }
   if (s.type === 'part') {
     const pt = getItem('parts', s.partId);
     return `<div class="st pt" id="ed-${s.id}" data-id="${s.id}">${head('部品')}<div><b>${esc(pt ? pt.name || '名前なし' : '見つからない部品')}</b></div>` +
-      (pt ? `<ol class="pt-sum">${pt.steps.map(x => x.type === 'section' ? `<li class="pt-sec">${esc(x.title || '区切り')}</li>` : `<li>${x.type === 'branch' ? '分かれ道:' + esc(x.question) : esc(x.text) || '(空)'}</li>`).join('')}</ol>
+      (pt ? `<ol class="pt-sum">${pt.steps.map(x => x.type === 'section' ? `<li class="pt-sec lv${+x.level || 1}">${esc(x.title || '区切り')}</li>` : `<li>${x.type === 'branch' ? '分かれ道:' + esc(x.question) : esc(x.text) || '(空)'}</li>`).join('')}</ol>
         <button type="button" class="linkbtn" data-act="openpart" data-id="${esc(pt.id)}">部品の中身を直す</button>` : '') + `</div>`;
   }
   return `<div class="st do" id="ed-${s.id}" data-id="${s.id}">${head('やること')}
@@ -722,7 +737,7 @@ function pvList(steps, labels, inner) {
 }
 function pvSection(steps, i) {
   const s = steps[i], t = C.fmtSpan(C.sectionSpan(steps, i, S.data));
-  return `<li class="pv-sec" data-pv="jump" data-id="${s.id}"><span class="pv-sec-t">${s.title ? esc(s.title) : '<span class="pv-blank">(区切りの名前なし)</span>'}</span>${t ? `<span class="pv-sec-m">${t}</span>` : ''}</li>`;
+  return `<li class="pv-sec lv${+s.level || 1}" data-pv="jump" data-id="${s.id}"><span class="pv-sec-t">${s.title ? esc(s.title) : '<span class="pv-blank">(区切りの名前なし)</span>'}</span>${t ? `<span class="pv-sec-m">${t}</span>` : ''}</li>`;
 }
 function pvStep(s, labels) {
   const num = `<span class="pv-num">${labels[s.id] || ''}</span>`;
@@ -1102,6 +1117,9 @@ document.addEventListener('change', e => {
   } else if (d.sel === 'link') {
     if (t.value) S.data.links[d.tid] = t.value; else delete S.data.links[d.tid];
     S.linkRows.add(d.tid); touch('links', d.tid); render();
+  } else if (d.f === 'level') {
+    const p = cur(); const l = p && locate(p, d.id); if (!l) return;
+    l.step.level = Math.min(3, Math.max(1, +t.value || 1)); touch(S.tab, p.id); renderSteps();
   } else if (d.tmin) {
     S.tq[d.tmin] = Object.assign({ q: '', m: '' }, S.tq[d.tmin], { m: t.value });
     const box = $('#tpl-' + d.tmin); if (box) box.innerHTML = pickerList(d.tmin);
