@@ -108,6 +108,22 @@ main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
 .st.sec.lv2{margin-left:16px;background:#F3F5F7}
 .st.sec.lv3{margin-left:32px;background:#F8F9FA}
 .lvsel{font-size:.8125rem;padding:1px 4px}
+.pv-alw{margin:0 0 12px;padding:6px 10px;border:1px solid #9CC9B0;border-left:4px solid var(--ok);background:#EDF6F0;border-radius:4px;font-size:.875rem;line-height:1.55}
+.pv-alw-h{font-size:.75rem;color:var(--ok);font-weight:700;margin-bottom:2px}
+.pv-alw ul{margin:0;padding:0;list-style:none}
+.pv-alw li{display:flex;flex-wrap:wrap;gap:2px 6px;align-items:baseline;padding:2px 0}
+.aw-always{font-size:.6875rem;font-weight:700;background:var(--ok);color:#fff;border-radius:3px;padding:0 5px}
+.aw-when{font-weight:700;white-space:pre-wrap}
+.aw-text{white-space:pre-wrap;word-break:break-word}
+.aw-arrow{color:var(--sub)}
+.pv-alw-li{list-style:none;position:relative;z-index:1}
+.alw-ed{background:#F1F7F3;border:1px dashed #9CC9B0;border-radius:4px;padding:6px 8px;margin:6px 0 8px}
+.alw-h{font-size:.8125rem;color:var(--ok);font-weight:700;margin-bottom:4px}
+.alw-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.4fr) auto;gap:6px;align-items:center;margin:0 0 6px}
+.alw-row input{border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:#fff;width:100%}
+@media (max-width:520px){.alw-row{grid-template-columns:auto minmax(0,1fr) auto}.alw-row input[data-aw="when"]{grid-column:1 / -1}}
+.alw-ed.empty{background:none;border:none;padding:0;margin:4px 0 8px}
+.add2.alwb{border-color:var(--ok);color:var(--ok);font-size:.8125rem;padding:2px 8px}
 .pt-sum .pt-sec.lv2{margin-left:-.7em;font-weight:400}
 .pt-sum .pt-sec.lv3{margin-left:0;font-weight:400;font-size:.8125rem}
 .pv-sec-t{font-weight:700;letter-spacing:.04em}
@@ -249,13 +265,13 @@ details.addtask[open] summary{margin-bottom:8px}
   <button class="btn primary" id="saveBtn" type="button">保存する</button>
 </div>
 
-<script src="core.js?v=6"></script>
+<script src="core.js?v=7"></script>
 <script>
 'use strict';
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 let C = window.TJCore;
 // この画面が使う計算。古い core.js が端末に残っていると無いので、そのときは新しいものを取り直す
-const CORE_NEEDS = ['fmtStep', 'stepTime', 'sectionSpan', 'numbering', 'span'];
+const CORE_NEEDS = ['fmtStep', 'stepTime', 'sectionSpan', 'numbering', 'span', 'liveRules'];
 const coreOk = () => !!window.TJCore && CORE_NEEDS.every(k => typeof window.TJCore[k] === 'function');
 function refreshCore() {
   return new Promise(res => {
@@ -361,7 +377,7 @@ function listByKey(proc, key) { if (key === 'root') return proc.steps; const r =
 function newStep(type) {
   if (type === 'branch') return { id: uid('s'), type: 'branch', question: '', options: [
     { id: uid('o'), label: 'はい', steps: [] }, { id: uid('o'), label: 'いいえ', steps: [] }] };
-  if (type === 'section') return { id: uid('s'), type: 'section', title: '', level: 1 };
+  if (type === 'section') return { id: uid('s'), type: 'section', title: '', level: 1, always: [] };
   return { id: uid('s'), type: 'do', text: '', min: null, max: null };
 }
 function renewIds(step) {
@@ -595,8 +611,8 @@ function exProc() {
   if (p) return p;
   const part = exPart(); exRange();
   const sid = () => uid('s'), oid = () => uid('o');
-  p = { id: uid('p'), name: EX.proc, steps: [
-    { id: sid(), type: 'section', title: '長文', level: 1 },
+  p = { id: uid('p'), name: EX.proc, always: [{ id: uid('a'), when: '', text: '英文は声に出して読む' }], steps: [
+    { id: sid(), type: 'section', title: '長文', level: 1, always: [{ id: uid('a'), when: '知らない単語が出たら', text: '印を付けて、止まらずに先へ進む' }] },
     { id: sid(), type: 'section', title: '解く', level: 2 },
     { id: sid(), type: 'do', text: '時間を計って長文を1題解く', min: 20, max: 25 },
     { id: sid(), type: 'section', title: '直す', level: 2 },
@@ -650,7 +666,8 @@ function renderEditor(v) {
 function renderSteps() {
   const p = cur(); if (!p) return;
   const ed = $('#ed');
-  ed.innerHTML = edList(p.steps, 'root', C.numbering(p.steps, S.data));
+  ed.innerHTML = alwaysEd('item', p.always, S.tab === 'parts' ? 'この部品のあいだ常にすること' : 'この手順書のあいだ常にすること') +
+    edList(p.steps, 'root', C.numbering(p.steps, S.data));
   ed.querySelectorAll('textarea').forEach(autosize);
   renderPreview();
 }
@@ -688,7 +705,8 @@ function edStep(s, i, n, labels) {
     return `<div class="st sec lv${lv}" id="ed-${s.id}" data-id="${s.id}"><div class="st-head"><span class="st-kind">区切り</span>
       <select class="lvsel" data-f="level" data-id="${s.id}" aria-label="区切りの大きさ">${SEC_LV.map((l, k) => `<option value="${k + 1}"${k + 1 === lv ? ' selected' : ''}>${l}</option>`).join('')}</select>${tools(s, i, n)}</div>
       <input type="text" data-f="title" data-id="${s.id}" value="${esc(s.title)}" placeholder="${['区切りの名前(例:英解釈)', '中の区切りの名前(例:例題)', '細かい区切りの名前(例:1問目)'][lv - 1]}" aria-label="区切りの名前">
-      <p class="merge">${lv === 1 ? 'ここから次の区切りまでが、ひとまとまりになります。' : '上の大きい区切りの中で、ここから次の同じか大きい区切りまでが、ひとまとまりになります。'}</p></div>`;
+      <p class="merge">${lv === 1 ? 'ここから次の区切りまでが、ひとまとまりになります。' : '上の大きい区切りの中で、ここから次の同じか大きい区切りまでが、ひとまとまりになります。'}</p>
+      ${alwaysEd(s.id, s.always, 'この区切りのあいだ常にすること(中の小さい区切りにも効く)')}</div>`;
   }
   if (s.type === 'part') {
     const pt = getItem('parts', s.partId);
@@ -702,6 +720,21 @@ function edStep(s, i, n, labels) {
       <input type="number" inputmode="decimal" min="0" step="1" data-f="min" data-id="${s.id}" value="${s.min == null ? '' : s.min}" aria-label="時間(短いとき)">〜
       <input type="number" inputmode="decimal" min="0" step="1" data-f="max" data-id="${s.id}" value="${s.max == null ? '' : s.max}" aria-label="時間(長いとき)"> 分
       <span class="min-hint">短いとき〜長いとき。片方だけでもよい</span></div></div>`;
+}
+// 常にすることを書くところ。owner は 'item'(手順書・部品の全体)か、区切りのid
+function alwaysEd(owner, rules, label) {
+  if (!(rules || []).length) return `<div class="alw-ed empty"><button type="button" class="add2 alwb" data-act="alw-add" data-owner="${owner}">＋ ${esc(label)}</button></div>`;
+  return `<div class="alw-ed"><div class="alw-h">${esc(label)}</div>` + (rules || []).map(r => `<div class="alw-row">
+      <input type="text" data-aw="when" data-owner="${owner}" data-rid="${r.id}" value="${esc(r.when)}" placeholder="〜のとき(空なら常に)" aria-label="いつ">
+      <span class="aw-arrow">→</span>
+      <input type="text" data-aw="text" data-owner="${owner}" data-rid="${r.id}" value="${esc(r.text)}" placeholder="すること(例:英文は声に出して読む)" aria-label="すること">
+      <button type="button" class="small" data-act="alw-rm" data-owner="${owner}" data-rid="${r.id}">消す</button></div>`).join('') +
+    `<button type="button" class="add2 alwb" data-act="alw-add" data-owner="${owner}">＋ 常にすること</button></div>`;
+}
+function rulesOf(p, owner) {
+  if (owner === 'item') return (p.always = Array.isArray(p.always) ? p.always : []);
+  const l = locate(p, owner); if (!l || l.step.type !== 'section') return null;
+  return (l.step.always = Array.isArray(l.step.always) ? l.step.always : []);
 }
 function autosize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
 
@@ -727,9 +760,17 @@ function renderPreview() {
   try { drawPreview(p, pv); }
   catch (e) { pv.innerHTML = `<p class="pv-hint">見本を出せませんでした。アプリを閉じて開き直してください。直らないときは、接続の欄の「今開いている版」を確かめてください。</p>`; }
 }
+function alwaysBox(rules, label) {
+  const rs = C.liveRules(rules);
+  if (!rs.length) return '';
+  return `<div class="pv-alw"><div class="pv-alw-h">${esc(label)}</div><ul>` + rs.map(r => `<li>` +
+    (r.when.trim() ? `<span class="aw-when">${richText(r.when)}</span><span class="aw-arrow">→</span>` : `<span class="aw-always">常に</span>`) +
+    `<span class="aw-text">${r.text.trim() ? richText(r.text) : '<span class="pv-blank">(することを書いていません)</span>'}</span></li>`).join('') + `</ul></div>`;
+}
 function drawPreview(p, pv) {
   pv.innerHTML = previewHead(p.name || '名前なし', p.steps) +
     `<p class="sh-note">実行したときの見本です。丸を押すと済みの印、分かれ道は選ぶと先が出ます(どちらも保存はしません)。</p>` +
+    alwaysBox(p.always, S.tab === 'parts' ? 'この部品のあいだ' : 'この手順書のあいだ') +
     (p.steps.length ? pvList(p.steps, C.numbering(p.steps, S.data), '') : `<p class="pv-hint">右(スマホでは下)で手順を足すと、ここに出ます。</p>`);
 }
 function pvList(steps, labels, inner) {
@@ -737,7 +778,8 @@ function pvList(steps, labels, inner) {
 }
 function pvSection(steps, i) {
   const s = steps[i], t = C.fmtSpan(C.sectionSpan(steps, i, S.data));
-  return `<li class="pv-sec lv${+s.level || 1}" data-pv="jump" data-id="${s.id}"><span class="pv-sec-t">${s.title ? esc(s.title) : '<span class="pv-blank">(区切りの名前なし)</span>'}</span>${t ? `<span class="pv-sec-m">${t}</span>` : ''}</li>`;
+  return `<li class="pv-sec lv${+s.level || 1}" data-pv="jump" data-id="${s.id}"><span class="pv-sec-t">${s.title ? esc(s.title) : '<span class="pv-blank">(区切りの名前なし)</span>'}</span>${t ? `<span class="pv-sec-m">${t}</span>` : ''}</li>` +
+    (C.liveRules(s.always).length ? `<li class="pv-alw-li">${alwaysBox(s.always, '「' + (s.title || '区切り') + '」のあいだ')}</li>` : '');
 }
 function pvStep(s, labels) {
   const num = `<span class="pv-num">${labels[s.id] || ''}</span>`;
@@ -753,7 +795,7 @@ function pvStep(s, labels) {
     const pt = getItem('parts', s.partId), inner = C.expandPart(s, S.data);
     return `<li class="pv-step pt" data-id="${s.id}"><span class="pv-mark"></span>
       <div class="pv-body" data-pv="jump" data-id="${s.id}">${num}<span class="pv-q">${esc(pt ? pt.name || '名前なし' : '見つからない部品')}</span></div>` +
-      (inner.length ? pvList(inner, labels, 'part') : '') + `</li>`;
+      (pt ? alwaysBox(pt.always, '「' + (pt.name || '部品') + '」のあいだ') : '') + (inner.length ? pvList(inner, labels, 'part') : '') + `</li>`;
   }
   const done = !!S.checks[s.id];
   return `<li class="pv-step do${done ? ' done' : ''}" data-id="${s.id}">
@@ -1055,6 +1097,18 @@ document.addEventListener('click', e => {
     if ((coll === 'parts' ? deletePart : deleteProc)(p)) { S.open[coll] = null; render(); }
     return;
   }
+  if (act === 'alw-add') {
+    const rs = rulesOf(p, b.dataset.owner); if (!rs) return;
+    const r = { id: uid('a'), when: '', text: '' }; rs.push(r); touch(coll, p.id); renderSteps();
+    const i = document.querySelector(`[data-aw="text"][data-rid="${r.id}"]`); if (i) i.focus();
+    return;
+  }
+  if (act === 'alw-rm') {
+    const rs = rulesOf(p, b.dataset.owner); if (!rs) return;
+    const k = rs.findIndex(r => r.id === b.dataset.rid); if (k < 0) return;
+    rs.splice(k, 1); touch(coll, p.id); renderSteps();
+    return;
+  }
   let focusId = null;
   if (act === 'add') { const s = ops.add(p, b.dataset.key, b.dataset.type); if (!s) return; focusId = s.id; }
   else if (act === 'up' || act === 'down') { if (!ops.move(p, b.dataset.id, act === 'up' ? -1 : 1)) return; }
@@ -1081,6 +1135,12 @@ document.addEventListener('input', e => {
   if (t.dataset.tq) {
     const id = t.dataset.tq; S.tq[id] = Object.assign({ q: '', m: '' }, S.tq[id], { q: t.value });
     const box = $('#tpl-' + id); if (box) box.innerHTML = pickerList(id);
+    return;
+  }
+  if (t.dataset.aw) {
+    const p = cur(), rs = p && rulesOf(p, t.dataset.owner), r = rs && rs.find(x => x.id === t.dataset.rid);
+    if (!r) return;
+    r[t.dataset.aw] = t.value; touch(S.tab, p.id); previewSoon(renderPreview);
     return;
   }
   if (t.dataset.f) {
@@ -1287,9 +1347,9 @@ SE.init([
   ['[data-act="example"], [data-act="cy-example"]', 'levelup'],
   ['#saveBtn', 'send'],
   ['[data-pv="check"]', el => el.getAttribute('aria-pressed') === 'true' ? 'down' : 'done'],
-  ['[data-pv="pick"], [data-act="add"][data-type="do"], [data-act="add"][data-type="section"], [data-act="cy-add"], [data-act="rule-add"], [data-act="addopt"], [data-act="dup"], [data-act="dupitem"]', 'pluck'],
+  ['[data-pv="pick"], [data-act="add"][data-type="do"], [data-act="add"][data-type="section"], [data-act="alw-add"], [data-act="cy-add"], [data-act="rule-add"], [data-act="addopt"], [data-act="dup"], [data-act="dupitem"]', 'pluck'],
   ['[data-act="add"][data-type="branch"], [data-act="ln-add"], [data-act="rg-set"]', 'link'],
-  ['[data-act="del"], [data-act="delopt"], [data-act="delitem"], [data-act="cy-rm"], [data-act="rule-rm"], [data-act="cy-del"], [data-act="rg-del"]', 'remove'],
+  ['[data-act="alw-rm"], [data-act="del"], [data-act="delopt"], [data-act="delitem"], [data-act="cy-rm"], [data-act="rule-rm"], [data-act="cy-del"], [data-act="rg-del"]', 'remove'],
   ['[data-act="newitem"], [data-act="rg-new"], [data-act="cy-new-for"], [data-act="open"], [data-act="cy-open"], [data-act="rg-open"], [data-act="openpart"], #cGo', 'open'],
   ['[data-act="back"]', 'down'],
   ['[data-pv="cy"], [data-tab]', 'tab'],
