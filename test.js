@@ -110,7 +110,7 @@ const test = (name, fn) => tests.push([name, fn]);
 
 test('版が出て、データが無いときは最初の保存で作ると出る', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  assert.match($(dom, '#ver').textContent, /今開いている版:7/);
+  assert.match($(dom, '#ver').textContent, /今開いている版:8/);
   assert.match(status(dom), /最初に保存したときに作ります/);
   assert.match($(dom, '.empty').textContent, /手順書がまだありません/);
   assert.strictEqual($(dom, '#bar').hidden, true);
@@ -837,6 +837,60 @@ test('常にすること:部品にも置けて、差し込んだ手順書の見�
   tabTo(dom, 'procs'); click(dom, $(dom, '[data-act="newitem"]'));
   change(dom, $(dom, '[data-sel="addpart"][data-key="root"]'), partId);
   assert.strictEqual($(dom, '#pv .pv-step.pt .pv-alw-h').textContent, '「音読」のあいだ');
+});
+
+
+/* ---------- 版8:サイクルの複製 ---------- */
+async function cycleFor(dom, tid, names, procId) {
+  tabTo(dom, 'cycles');
+  click(dom, $(dom, `#tpl-cy [data-tid="${tid}"]`));
+  for (const n of names) { click(dom, $(dom, '[data-act="cy-add"]')); type(dom, $$(dom, '[data-cf="iname"]').pop(), n); }
+  if (procId) change(dom, $$(dom, '[data-cf="iproc"]')[1], procId);
+  click(dom, $(dom, '[data-act="rule-add"]')); type(dom, $(dom, '[data-cf="rule"]'), '試験前の週');
+}
+test('サイクルの複製:元のサイクルから、別のタスクのサイクルを作る', async () => {
+  const gh = makeGH(); withTasks(gh); const dom = await open(gh);
+  await buildExample(dom);
+  const pid = dom.window.TJ.S.data.procs[0].id;
+  await cycleFor(dom, 't1', ['過去の語彙', '未来の語彙', '長文'], pid);
+  const srcId = dom.window.TJ.S.open.cycles;
+  click(dom, $(dom, '[data-act="cy-dup"]'));
+  // 写す先には、まだサイクルの無いタスクだけが並ぶ
+  assert.deepStrictEqual($$(dom, '#tpl-cpy .tp-item b').map(e => e.textContent), ['Anki英単語', '数学演習']);
+  type(dom, $(dom, '[data-tq="cpy"]'), '数学');
+  assert.deepStrictEqual($$(dom, '#tpl-cpy .tp-item b').map(e => e.textContent), ['数学演習']);
+  click(dom, $(dom, '#tpl-cpy [data-tid="t3"]'));
+  assert.match($(dom, '.edhead h2').textContent, /数学演習のサイクル/);
+  assert.match($(dom, '#status').textContent, /「英語の長文」のサイクルを元に、「数学演習」のサイクルを作りました/);
+  assert.deepStrictEqual($$(dom, '[data-cf="iname"]').map(i => i.value), ['過去の語彙', '未来の語彙', '長文']);
+  assert.strictEqual($$(dom, '[data-cf="iproc"]')[1].value, pid);
+  assert.deepStrictEqual($$(dom, '[data-cf="rule"]').map(i => i.value), ['試験前の週']);
+  assert(!$(dom, '.copybox'), '開いた先では写す欄は閉じている');
+  // 写した先を直しても、元は変わらない
+  type(dom, $$(dom, '[data-cf="iname"]')[0], '例題');
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const cs = gh.json(DATA).cycles;
+  const src = cs.find(x => x.id === srcId), dst = cs.find(x => x.taskId === 't3');
+  assert.deepStrictEqual(src.items.map(i => i.name), ['過去の語彙', '未来の語彙', '長文']);
+  assert.deepStrictEqual(dst.items.map(i => i.name), ['例題', '未来の語彙', '長文']);
+  assert(dst.items.every(i => !src.items.some(j => j.id === i.id)), '中身のidは新しい');
+  assert.strictEqual(dst.anchorIndex, 0); assert.strictEqual(dst.anchorDate, TODAY);
+});
+
+test('サイクルの複製:空のサイクルで、ほかのサイクルから写す。やめるで閉じる', async () => {
+  const gh = makeGH(); withTasks(gh); const dom = await open(gh);
+  await cycleFor(dom, 't1', ['A', 'B'], null);
+  click(dom, $(dom, '[data-act="cy-dup"]'));
+  click(dom, $(dom, '[data-act="cy-dup-cancel"]'));
+  assert(!$(dom, '.copybox'));
+  click(dom, $(dom, '[data-act="back"]'));
+  click(dom, $(dom, '#tpl-cy [data-tid="t2"]'));
+  assert.strictEqual($$(dom, '.copyfrom [data-act="cy-copy-from"]').length, 1);
+  assert.match($(dom, '.copyfrom').textContent, /英語の長文A → B/);
+  click(dom, $(dom, '[data-act="cy-copy-from"]'));
+  assert.deepStrictEqual($$(dom, '[data-cf="iname"]').map(i => i.value), ['A', 'B']);
+  assert.deepStrictEqual($$(dom, '[data-cf="rule"]').map(i => i.value), ['試験前の週']);
+  assert(!$(dom, '.copyfrom'), '中身が入ったら写す欄は消える');
 });
 
 (async () => {

@@ -122,6 +122,10 @@ main{max-width:1180px;margin:0 auto;padding:4px 16px 24px}
 .alw-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.4fr) auto;gap:6px;align-items:center;margin:0 0 6px}
 .alw-row input{border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:#fff;width:100%}
 @media (max-width:520px){.alw-row{grid-template-columns:auto minmax(0,1fr) auto}.alw-row input[data-aw="when"]{grid-column:1 / -1}}
+.copybox{border-color:var(--accent);border-left:4px solid var(--accent)}
+.copyfrom{display:grid;gap:6px;margin:0 0 10px}
+.copyfrom .note{margin:0}
+@media (max-width:760px){.edhead.edhead > h2{flex:1 0 100%;order:-1}}
 .alw-ed.empty{background:none;border:none;padding:0;margin:4px 0 8px}
 .add2.alwb{border-color:var(--ok);color:var(--ok);font-size:.8125rem;padding:2px 8px}
 .pt-sum .pt-sec.lv2{margin-left:-.7em;font-weight:400}
@@ -268,7 +272,7 @@ details.addtask[open] summary{margin-bottom:8px}
 <script src="core.js?v=7"></script>
 <script>
 'use strict';
-const APP_VERSION = 7;
+const APP_VERSION = 8;
 let C = window.TJCore;
 // この画面が使う計算。古い core.js が端末に残っていると無いので、そのときは新しいものを取り直す
 const CORE_NEEDS = ['fmtStep', 'stepTime', 'sectionSpan', 'numbering', 'span', 'liveRules'];
@@ -820,7 +824,7 @@ const curCycle = () => getItem('cycles', S.open.cycles);
 function renderCycle(v) {
   const c = curCycle();
   v.innerHTML = `<div class="edhead"><button class="btn quiet" type="button" data-act="back">一覧へ</button>
-      <h2>${esc(taskName(c.taskId))}のサイクル</h2><button class="btn danger" type="button" data-act="cy-del">消す</button></div>
+      <h2>${esc(taskName(c.taskId))}のサイクル</h2><button class="btn quiet" type="button" data-act="cy-dup">複製</button><button class="btn danger" type="button" data-act="cy-del">消す</button></div>
     <div class="grid"><div class="pvwrap"><div class="sheet" id="pv"></div></div><div id="ed"></div></div>`;
   renderCycleEd();
 }
@@ -843,7 +847,17 @@ function renderCycleEd() {
   const rules = c.rules.map((r, i) => `<div class="rrow"><input type="text" data-cf="rule" data-ri="${i}" value="${esc(r)}" placeholder="例:未実行が3日以上続いたとき" aria-label="切り替えてよい条件">
       <button type="button" class="small" data-act="rule-rm" data-ri="${i}">消す</button></div>`).join('');
   const exBtn = !c.items.length ? `<p class="note">例:英語なら「過去の語彙 → 未来の語彙 → 長文」。<button type="button" class="linkbtn" data-act="cy-example">例を入れる</button></p>` : '';
-  $('#ed').innerHTML = `<div class="box"><h3>中身(この順に回ります)</h3>${old}${exBtn}${items}
+  // 中身が空なら、ほかのサイクルから写せる
+  const others = !c.items.length ? S.data.cycles.filter(x => x !== c && x.items.length) : [];
+  const fromBox = others.length ? `<div class="copyfrom"><p class="note">ほかのサイクルから写す(中身・手順書・切り替えてよい条件):</p>` +
+    others.map(x => `<button type="button" class="tp-item" data-act="cy-copy-from" data-cid="${esc(x.id)}"><b>${esc(taskName(x.taskId))}</b><span>${esc(x.items.map(i => i.name || '名前なし').join(' → '))}</span></button>`).join('') + `</div>` : '';
+  // 複製:このサイクルを元に、別のタスクのサイクルを作る
+  const free = S.tasks.filter(t => !cycleOf(t.id));
+  const dupBox = S.cyCopyOpen ? `<div class="box copybox"><h3>このサイクルを元に、別のタスクのサイクルを作る</h3>
+      <p class="note">中身(名前と中身ごとの手順書)と、切り替えてよい条件を写します。始まりは今日、最初の中身からです。手順書そのものは同じものを使うので、別々に直したいときは手順書のタブで手順書も複製してください。</p>
+      ${taskPicker('cpy', free, 'cy-copy-to', 'サイクルを作れるタスクがありません(どのタスクにもサイクルがあります)。')}
+      <p><button type="button" class="btn quiet" data-act="cy-dup-cancel">やめる</button></p></div>` : '';
+  $('#ed').innerHTML = dupBox + `<div class="box"><h3>中身(この順に回ります)</h3>${old}${exBtn}${fromBox}${items}
       <button type="button" class="add2" data-act="cy-add">＋ 中身</button>
       <p class="note" style="margin-top:8px">「タスクの手順書を使う」にすると、結びつきのタブで決めたそのタスクの手順書が出ます。</p></div>
     <div class="box"><h3>始まり</h3>${start}</div>
@@ -954,7 +968,13 @@ function renderLinks(v) {
 }
 
 /* ---------- 操作 ---------- */
-function openItem(tab, id) { S.tab = tab; S.open[tab] = id; S.pick = {}; S.checks = {}; S.cyPick = 0; render(); window.scrollTo(0, 0); }
+function openItem(tab, id) { S.tab = tab; S.open[tab] = id; S.pick = {}; S.checks = {}; S.cyPick = 0; S.cyCopyOpen = false; render(); window.scrollTo(0, 0); }
+// サイクルの中身と条件を写す(中身には新しいidを付ける。始まりは今日、最初の中身から)
+function copyCycleInto(src, dst) {
+  dst.items = src.items.map(it => ({ id: uid('i'), name: it.name, procId: it.procId || null }));
+  dst.rules = src.rules.slice();
+  dst.anchorDate = C.taskDay(); dst.anchorIndex = 0;
+}
 function focusStep(id) {
   const el = document.getElementById('ed-' + id); if (!el) return;
   const f = el.querySelector('textarea, input[type=text]'); if (f) f.focus({ preventScroll: true });
@@ -1046,6 +1066,23 @@ document.addEventListener('click', e => {
     if (act === 'cy-del') {
       if (!confirm(taskName(c.taskId) + 'のサイクルを消しますか?')) return;
       S.data.cycles.splice(S.data.cycles.indexOf(c), 1); drop('cycles', c.id); S.open.cycles = null; render(); return;
+    }
+    if (act === 'cy-dup') { S.cyCopyOpen = true; renderCycleEd(); const i = $('[data-tq="cpy"]'); if (i) i.focus(); return; }
+    if (act === 'cy-dup-cancel') { S.cyCopyOpen = false; renderCycleEd(); return; }
+    if (act === 'cy-copy-to') {
+      const tid = b.dataset.tid; if (!tid || cycleOf(tid)) return;
+      const nc = { id: uid('c'), taskId: tid, items: [], rules: [], anchorDate: C.taskDay(), anchorIndex: 0 };
+      copyCycleInto(c, nc); S.data.cycles.push(nc); touch('cycles', nc.id);
+      const from = taskName(c.taskId);
+      openItem('cycles', nc.id);
+      setStatus('「' + from + '」のサイクルを元に、「' + taskName(tid) + '」のサイクルを作りました。中身の名前や手順書は自由に変えられます。');
+      return;
+    }
+    if (act === 'cy-copy-from') {
+      const src = getItem('cycles', b.dataset.cid); if (!src || c.items.length) return;
+      copyCycleInto(src, c); touch('cycles', c.id); renderCycleEd();
+      setStatus('「' + taskName(src.taskId) + '」のサイクルを写しました。');
+      return;
     }
     if (act === 'cy-example') {
       if (c.items.length) return;
@@ -1348,7 +1385,8 @@ SE.init([
   ['#saveBtn', 'send'],
   ['[data-pv="check"]', el => el.getAttribute('aria-pressed') === 'true' ? 'down' : 'done'],
   ['[data-pv="pick"], [data-act="add"][data-type="do"], [data-act="add"][data-type="section"], [data-act="alw-add"], [data-act="cy-add"], [data-act="rule-add"], [data-act="addopt"], [data-act="dup"], [data-act="dupitem"]', 'pluck'],
-  ['[data-act="add"][data-type="branch"], [data-act="ln-add"], [data-act="rg-set"]', 'link'],
+  ['[data-act="add"][data-type="branch"], [data-act="ln-add"], [data-act="rg-set"], [data-act="cy-copy-to"], [data-act="cy-copy-from"]', 'link'],
+  ['[data-act="cy-dup"]', 'pluck'],
   ['[data-act="alw-rm"], [data-act="del"], [data-act="delopt"], [data-act="delitem"], [data-act="cy-rm"], [data-act="rule-rm"], [data-act="cy-del"], [data-act="rg-del"]', 'remove'],
   ['[data-act="newitem"], [data-act="rg-new"], [data-act="cy-new-for"], [data-act="open"], [data-act="cy-open"], [data-act="rg-open"], [data-act="openpart"], #cGo', 'open'],
   ['[data-act="back"]', 'down'],
