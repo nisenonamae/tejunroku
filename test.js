@@ -110,7 +110,7 @@ const test = (name, fn) => tests.push([name, fn]);
 
 test('版が出て、データが無いときは最初の保存で作ると出る', async () => {
   const gh = makeGH(); const dom = await open(gh);
-  assert.match($(dom, '#ver').textContent, /今開いている版:6/);
+  assert.match($(dom, '#ver').textContent, /今開いている版:7/);
   assert.match(status(dom), /最初に保存したときに作ります/);
   assert.match($(dom, '.empty').textContent, /手順書がまだありません/);
   assert.strictEqual($(dom, '#bar').hidden, true);
@@ -774,6 +774,69 @@ test('計算:区切りの大きさ(前の版の区切りは大として扱う)',
   assert.deepStrictEqual(st.filter(x => x.type === 'section').map(x => x.level), [1, 2, 3, 2, 3]);
   const sp = i => Core.fmtSpan(Core.sectionSpan(st, i));
   assert.deepStrictEqual([sp(0), sp(1), sp(3), sp(5), sp(7)], ['15分', '3分', '2分', '12分', '8分']);
+});
+
+
+/* ---------- 版7:常にすること ---------- */
+test('常にすること:手順書全体と区切りに置ける。「〜のとき」を空にすると「常に」になる', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  click(dom, $(dom, '[data-act="newitem"]'));
+  type(dom, $(dom, '.edhead .name'), '英語の日');
+  // 手順書全体
+  click(dom, $(dom, '#ed > .alw-ed [data-act="alw-add"]'));
+  type(dom, $(dom, '#ed > .alw-ed [data-aw="text"]'), '英文は声に出して読む');
+  // 区切り「英解釈」のあいだ
+  click(dom, lastAdd(dom, 'root', 'section'));
+  type(dom, $(dom, '#ed .st.sec input[data-f="title"]'), '英解釈');
+  click(dom, $(dom, '#ed .st.sec [data-act="alw-add"]'));
+  type(dom, $(dom, '#ed .st.sec [data-aw="when"]'), '知らない単語が出たら');
+  type(dom, $(dom, '#ed .st.sec [data-aw="text"]'), '印を付けて先へ進む');
+  click(dom, lastAdd(dom, 'root', 'do'));
+  type(dom, $$(dom, '#ed .st.do textarea').pop(), '構文を取る');
+  await wait(dom, 200);
+  const boxes = $$(dom, '#pv .pv-alw');
+  assert.strictEqual(boxes.length, 2);
+  assert.strictEqual(boxes[0].querySelector('.pv-alw-h').textContent, 'この手順書のあいだ');
+  assert.strictEqual(boxes[0].querySelector('li').textContent, '常に英文は声に出して読む');
+  assert.strictEqual(boxes[1].querySelector('.pv-alw-h').textContent, '「英解釈」のあいだ');
+  assert.strictEqual(boxes[1].querySelector('li').textContent, '知らない単語が出たら→印を付けて先へ進む');
+  // 区切りの帯のすぐ下に出る
+  assert($(dom, '#pv .pv-sec + .pv-alw-li'));
+  // 番号は変わらない
+  assert.deepStrictEqual($$(dom, '#pv .pv-num').map(e => e.textContent), ['1', '2']);
+  click(dom, $(dom, '#saveBtn')); await settle(dom);
+  const pr = gh.json(DATA).procs[0];
+  assert.deepStrictEqual(pr.always.map(r => [r.when, r.text]), [['', '英文は声に出して読む']]);
+  const sec = pr.steps.find(x => x.type === 'section');
+  assert.deepStrictEqual(sec.always.map(r => [r.when, r.text]), [['知らない単語が出たら', '印を付けて先へ進む']]);
+});
+
+test('常にすること:空のものは見本に出さず、消せる。範囲の名前も使える', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  click(dom, $(dom, '[data-act="example"]'));
+  assert.deepStrictEqual($$(dom, '#pv .pv-alw-h').map(e => e.textContent), ['この手順書のあいだ', '「長文」のあいだ']);
+  click(dom, $(dom, '#ed > .alw-ed [data-act="alw-add"]'));             // 空のを足しても
+  assert.strictEqual($$(dom, '#pv .pv-alw li').length, 2, '空のものは出ない');
+  type(dom, $$(dom, '#ed > .alw-ed [data-aw="text"]').pop(), '{例の単語帳} は毎回見直す');
+  await wait(dom, 200);
+  assert.strictEqual($$(dom, '#pv .pv-alw')[0].querySelector('.rng').textContent, '例の単語帳 401〜500番');
+  // 消す
+  click(dom, $$(dom, '#ed > .alw-ed [data-act="alw-rm"]')[0]);
+  await wait(dom, 200);
+  assert.deepStrictEqual($$(dom, '#pv .pv-alw')[0].querySelectorAll('li').length, 1);
+  assert.match($$(dom, '#pv .pv-alw')[0].textContent, /見直す/);
+});
+
+test('常にすること:部品にも置けて、差し込んだ手順書の見本に出る', async () => {
+  const gh = makeGH(); const dom = await open(gh);
+  tabTo(dom, 'parts'); click(dom, $(dom, '[data-act="newitem"]'));
+  type(dom, $(dom, '.edhead .name'), '音読');
+  click(dom, $(dom, '#ed > .alw-ed [data-act="alw-add"]'));
+  type(dom, $(dom, '#ed > .alw-ed [data-aw="text"]'), '録音する');
+  const partId = dom.window.TJ.S.open.parts;
+  tabTo(dom, 'procs'); click(dom, $(dom, '[data-act="newitem"]'));
+  change(dom, $(dom, '[data-sel="addpart"][data-key="root"]'), partId);
+  assert.strictEqual($(dom, '#pv .pv-step.pt .pv-alw-h').textContent, '「音読」のあいだ');
 });
 
 (async () => {

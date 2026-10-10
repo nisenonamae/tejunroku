@@ -23,6 +23,10 @@
 
   /* ---------- データの形 ---------- */
   function emptyData() { return { version: 1, procs: [], ranges: [], parts: [], cycles: [], links: {} }; }
+  // 常にすること:{ id, when(〜のとき。空なら常に), text(すること) }
+  function normRules(rs) {
+    return (Array.isArray(rs) ? rs : []).filter(isObj).map(r => ({ id: r.id || uid('a'), when: String(r.when || ''), text: String(r.text || '') }));
+  }
   function normSteps(steps, allowPart) {
     if (!Array.isArray(steps)) return [];
     return steps.filter(isObj).filter(s => allowPart !== false || s.type !== 'part').map(s => {
@@ -39,6 +43,7 @@
       } else if (s.type === 'section') {
         s.title = s.title || '';                      // 区切り:ここから次の区切りまでをひとまとまりとして見せる
         s.level = Math.min(3, Math.max(1, Math.round(num(s.level, 1))));   // 大きさ 1=大 2=中 3=小。小さい区切りは大きい区切りの中に入る
+        s.always = normRules(s.always);              // この区切りのあいだ常にすること
       } else {
         s.type = 'do'; s.text = s.text || ''; s.min = num(s.min, null); s.max = num(s.max, null);   // 時間は 短いとき〜長いとき
       }
@@ -51,8 +56,8 @@
     for (const k of Object.keys(e)) {
       if (Array.isArray(e[k]) ? !Array.isArray(d[k]) : !isObj(d[k])) d[k] = e[k];
     }
-    d.procs = d.procs.filter(isObj).map(p => { p.id = p.id || uid('p'); p.name = p.name || ''; p.steps = normSteps(p.steps); return p; });
-    d.parts = d.parts.filter(isObj).map(p => { p.id = p.id || uid('t'); p.name = p.name || ''; p.steps = normSteps(p.steps, false); return p; });
+    d.procs = d.procs.filter(isObj).map(p => { p.id = p.id || uid('p'); p.name = p.name || ''; p.steps = normSteps(p.steps); p.always = normRules(p.always); return p; });
+    d.parts = d.parts.filter(isObj).map(p => { p.id = p.id || uid('t'); p.name = p.name || ''; p.steps = normSteps(p.steps, false); p.always = normRules(p.always); return p; });
     d.ranges = d.ranges.filter(isObj).map(r => {
       r.id = r.id || uid('r'); r.name = r.name || ''; r.unit = r.unit || '';
       r.start = Math.round(num(r.start, 1)); r.end = Math.round(num(r.end, r.start));
@@ -253,7 +258,9 @@
     return out;
   }
 
-  const api = { uid, clone, emptyData, normSteps, normalize, walk, expandPart, numbering, span, allPicked, hasBranch,
+  // 書いてある「常にすること」だけ
+  const liveRules = rs => (rs || []).filter(r => r && (String(r.text || '').trim() || String(r.when || '').trim()));
+  const api = { uid, clone, emptyData, normSteps, normRules, liveRules, normalize, walk, expandPart, numbering, span, allPicked, hasBranch,
     fmtMin, fmtSpan, fmtStep, stepTime, sectionSpan, taskDay, rangeAdvances, rangeState, rangeText, rangeSinceMonth, rangeNamesIn, RANGE_RE, taskList };
   root.TJCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
